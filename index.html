@@ -1,508 +1,481 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>抖音达人种草营销数据看板</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 <style>
-:root {
-  --bg: #0f1117; --card-bg: #1a1d27; --card-border: #2a2d3a;
-  --text: #e1e4ea; --text-dim: #8b8fa3; --accent: #4f8ff7;
-  --green: #34c759; --orange: #ff9f0a; --red: #ff453a; --purple: #bf5af2;
-  --radius: 10px;
-}
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
-.header { background:var(--card-bg); border-bottom:1px solid var(--card-border); padding:0 20px; display:flex; align-items:center; justify-content:space-between; height:52px; }
-.header-left { display:flex; align-items:center; gap:12px; }
-.logo { font-size:16px; font-weight:700; }
-.logo span { color:var(--accent); }
-.global-controls { display:flex; align-items:center; gap:10px; }
-.control-group { display:flex; align-items:center; gap:4px; background:var(--bg); border-radius:8px; padding:2px; }
-.control-btn { padding:6px 14px; border:none; background:transparent; color:var(--text-dim); border-radius:6px; cursor:pointer; font-size:13px; transition:.15s; white-space:nowrap; }
-.control-btn.active { background:var(--accent); color:#fff; }
-.control-btn:hover:not(.active) { color:var(--text); background:var(--card-border); }
-.divider { width:1px; height:24px; background:var(--card-border); margin:0 2px; }
-.upload-btn,.metric-btn { padding:6px 14px; border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-dim); border-radius:8px; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px; }
-.upload-btn:hover,.metric-btn:hover { border-color:var(--accent); color:var(--text); }
-.date-filter { display:flex; align-items:center; gap:6px; }
-.date-input { padding:6px 10px; border:1px solid var(--card-border); background:var(--bg); color:var(--text); border-radius:6px; font-size:13px; width:115px; }
-.date-label { font-size:12px; color:var(--text-dim); }
-.nav { display:flex; border-bottom:1px solid var(--card-border); padding:0 20px; background:var(--card-bg); overflow-x:auto; }
-.nav-tab { padding:12px 18px; border:none; background:transparent; color:var(--text-dim); cursor:pointer; font-size:14px; border-bottom:2px solid transparent; white-space:nowrap; transition:.15s; }
-.nav-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-.nav-tab:hover:not(.active) { color:var(--text); }
-.nav-section-label { font-size:11px; color:var(--text-dim); padding:0 8px; display:flex; align-items:center; }
-.main-content { padding:20px; }
-.page { display:none; }
-.page.active { display:block; }
-.kpi-row { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:20px; }
-.kpi-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius); padding:16px; }
-.kpi-label { font-size:12px; color:var(--text-dim); margin-bottom:6px; }
-.kpi-value { font-size:26px; font-weight:700; }
-.kpi-change { font-size:12px; margin-top:4px; color:var(--text-dim); }
-.kpi-change.up { color:var(--green); }
-.kpi-change.down { color:var(--red); }
-.chart-row { display:grid; gap:14px; margin-bottom:20px; }
-.chart-row.cols-2 { grid-template-columns:1fr 1fr; }
-.chart-row.cols-3 { grid-template-columns:1fr 1fr 1fr; }
-.chart-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius); padding:20px; }
-.chart-card h3 { font-size:15px; font-weight:600; margin-bottom:14px; }
-.chart-card .card-subtitle { font-size:11px; color:var(--text-dim); margin-bottom:12px; }
-table { width:100%; border-collapse:collapse; font-size:13px; }
-th { text-align:left; padding:10px 14px; color:var(--text-dim); font-weight:500; border-bottom:1px solid var(--card-border); font-size:12px; white-space:nowrap; }
-td { padding:10px 14px; border-bottom:1px solid rgba(42,45,58,.5); }
-tr:hover td { background:rgba(79,143,247,.04); }
-.status-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; }
-.status-dot.green { background:var(--green); }
-.status-dot.yellow { background:var(--orange); }
-.status-dot.red { background:var(--red); }
-.tag { font-size:11px; padding:2px 8px; border-radius:4px; font-weight:500; }
-.tag-blue { background:rgba(79,143,247,.15); color:var(--accent); }
-.tag-green { background:rgba(52,199,89,.15); color:var(--green); }
-.tag-orange { background:rgba(255,159,10,.15); color:var(--orange); }
-.tag-purple { background:rgba(191,90,242,.15); color:var(--purple); }
-.tag-red { background:rgba(255,69,58,.15); color:var(--red); }
-.bar-cell { display:flex; align-items:center; gap:8px; }
-.bar-bg { flex:1; height:6px; background:var(--card-border); border-radius:3px; overflow:hidden; }
-.bar-fill { height:100%; border-radius:3px; }
-.bar-fill.blue { background:var(--accent); }
-.bar-fill.green { background:var(--green); }
-.bar-fill.orange { background:var(--orange); }
-.na { color:var(--text-dim); font-style:italic; }
-
-/* Login */
-.login-overlay { position:fixed; inset:0; background:var(--bg); z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column; }
-.login-overlay.hidden { display:none; }
-.login-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:40px; width:400px; text-align:center; }
-.login-card .login-logo { font-size:40px; margin-bottom:8px; }
-.login-card h2 { font-size:20px; margin-bottom:4px; }
-.login-card .login-sub { color:var(--text-dim); font-size:13px; margin-bottom:24px; }
-.login-card input { width:100%; padding:12px 16px; border:1px solid var(--card-border); background:var(--bg); color:var(--text); border-radius:10px; font-size:14px; margin-bottom:12px; outline:none; }
-.login-card input:focus { border-color:var(--accent); }
-.login-card .login-btn { width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; }
-.login-card .login-btn:hover { opacity:.9; }
-.login-card .login-error { color:var(--red); font-size:12px; margin-top:8px; min-height:18px; }
-.login-card .login-hint { color:var(--text-dim); font-size:11px; margin-top:16px; line-height:1.6; }
-
-/* Role */
-.role-viewer .upload-btn { display:none !important; }
-.role-viewer .metric-btn { display:none !important; }
-.user-badge { display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 10px; border-radius:6px; cursor:pointer; }
-.user-badge.admin { background:rgba(191,90,242,.15); color:#bf5af2; }
-.user-badge.operator { background:rgba(79,143,247,.15); color:#4f8ff7; }
-.user-badge.viewer { background:rgba(139,143,163,.12); color:#8b8fa3; }
-
-/* Modal */
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:1001; display:none; align-items:center; justify-content:center; }
-.modal-overlay.open { display:flex; }
-.modal { background:var(--card-bg); border:1px solid var(--card-border); border-radius:14px; padding:28px; width:520px; max-height:80vh; overflow-y:auto; }
-.modal h3 { font-size:18px; margin-bottom:8px; }
-.modal p { color:var(--text-dim); font-size:13px; margin-bottom:20px; }
-.upload-zone { border:2px dashed var(--card-border); border-radius:12px; padding:40px; text-align:center; cursor:pointer; margin-bottom:16px; transition:border-color .2s; }
-.upload-zone:hover { border-color:var(--accent); }
-.upload-zone .icon { font-size:40px; margin-bottom:10px; }
-.source-select { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
-.source-opt { padding:10px; border:1px solid var(--card-border); border-radius:8px; text-align:center; cursor:pointer; font-size:13px; }
-.source-opt.selected { border-color:var(--accent); background:rgba(79,143,247,.1); }
-.btn { padding:8px 18px; border-radius:8px; border:none; cursor:pointer; font-size:13px; }
-.btn-primary { background:var(--accent); color:#fff; }
-.btn-secondary { background:var(--card-border); color:var(--text); }
-
-/* 5A */
-.fiveA-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
-.fiveA-cell { text-align:center; padding:14px 8px; border-radius:10px; border:1px solid rgba(255,255,255,.06); }
-.fiveA-cell .cell-icon { font-size:22px; margin-bottom:6px; }
-.fiveA-cell .cell-value { font-size:20px; font-weight:700; }
-.fiveA-cell .cell-label { font-size:11px; color:var(--text-dim); margin-top:2px; }
-.fiveA-cell .cell-sub { font-size:10px; margin-top:4px; }
-.fiveA-cell.a1 { background:rgba(58,77,143,.12); }
-.fiveA-cell.a2 { background:rgba(53,89,133,.12); }
-.fiveA-cell.a3 { background:rgba(52,199,89,.08); border-color:rgba(52,199,89,.25); }
-.fiveA-cell.a4 { background:rgba(255,159,10,.08); }
-.fiveA-cell.a5 { background:rgba(255,69,58,.08); }
-.fiveA-cell.na { background:rgba(139,143,163,.06); }
-.a3-highlight-card { background:linear-gradient(135deg, rgba(52,199,89,.08) 0%, rgba(52,199,89,.02) 100%); border:1px solid rgba(52,199,89,.2); border-radius:12px; padding:20px; }
-.a3-highlight-card h4 { color:var(--green); margin-bottom:12px; font-size:14px; }
-.flow-arrow-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; gap:8px; }
-.flow-arrow-item { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-dim); }
-.flow-arrow-item .arrow { font-size:14px; }
-.flow-arrow-item .rate { font-weight:600; color:var(--text); }
-.footer-bar { background:var(--card-bg); border-top:1px solid var(--card-border); padding:8px 20px; font-size:11px; color:var(--text-dim); display:flex; gap:16px; position:fixed; bottom:0; left:0; right:0; z-index:100; }
+:root{--bg:#0f1117;--cbg:#1a1d27;--cbd:#2a2d3a;--t:#e1e4ea;--td:#8b8fa3;--a:#4f8ff7;--g:#34c759;--o:#ff9f0a;--r:#ff453a;--p:#bf5af2;--ra:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:var(--bg);color:var(--t);min-height:100vh;padding-bottom:36px}
+.header{background:var(--cbg);border-bottom:1px solid var(--cbd);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:48px}
+.logo{font-size:15px;font-weight:700}.logo span{color:var(--a)}
+.header-r{display:flex;align-items:center;gap:10px}
+.ubtn{padding:5px 12px;border:1px solid var(--cbd);background:var(--cbg);color:var(--td);border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px}
+.ubtn:hover{border-color:var(--a);color:var(--t)}
+.nav{display:flex;border-bottom:1px solid var(--cbd);padding:0 20px;background:var(--cbg);overflow-x:auto}
+.nt{padding:10px 16px;border:none;background:transparent;color:var(--td);cursor:pointer;font-size:13px;border-bottom:2px solid transparent;white-space:nowrap;transition:.15s}
+.nt.active{color:var(--a);border-bottom-color:var(--a)}
+.nt:hover:not(.active){color:var(--t)}
+.ns{font-size:10px;color:var(--td);padding:0 6px;display:flex;align-items:center;letter-spacing:1px}
+.main{padding:16px 20px}
+.page{display:none}.page.active{display:block}
+.kr{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.kc{background:var(--cbg);border:1px solid var(--cbd);border-radius:var(--ra);padding:14px}
+.kl{font-size:11px;color:var(--td);margin-bottom:4px}
+.kv{font-size:24px;font-weight:700}
+.kh{font-size:11px;margin-top:3px;color:var(--td)}.kh.up{color:var(--g)}.kh.down{color:var(--r)}
+.cr{display:grid;gap:12px;margin-bottom:16px}.cr.c2{grid-template-columns:1fr 1fr}
+.cc{background:var(--cbg);border:1px solid var(--cbd);border-radius:var(--ra);padding:18px}
+.cc h3{font-size:14px;font-weight:600;margin-bottom:4px}
+.cc .cs{font-size:11px;color:var(--td);margin-bottom:12px}
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.toolbar input,.toolbar select{padding:5px 10px;border:1px solid var(--cbd);background:var(--bg);color:var(--t);border-radius:6px;font-size:12px}
+.toolbar input{width:160px}.toolbar select{width:130px}
+.sortable{cursor:pointer;user-select:none}.sortable:hover{color:var(--a)}
+.sortable::after{content:' ↕';font-size:10px;color:var(--td)}.sortable.asc::after{content:' ↑';color:var(--a)}.sortable.desc::after{content:' ↓';color:var(--a)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;color:var(--td);font-weight:500;border-bottom:1px solid var(--cbd);font-size:11px;white-space:nowrap;background:rgba(0,0,0,.15);position:sticky;top:0}
+td{padding:8px 10px;border-bottom:1px solid rgba(42,45,58,.4)}
+tr:hover td{background:rgba(79,143,247,.04)}tr.hidden{display:none}
+.sd{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}
+.sd.g{background:var(--g)}.sd.y{background:var(--o)}.sd.r{background:var(--r)}
+.tag{font-size:10px;padding:1px 7px;border-radius:4px;font-weight:500}
+.tb{background:rgba(79,143,247,.15);color:var(--a)}.tg{background:rgba(52,199,89,.15);color:var(--g)}
+.to{background:rgba(255,159,10,.15);color:var(--o)}.tp{background:rgba(191,90,242,.15);color:var(--p)}
+.na{color:var(--td);font-style:italic}
+.bc{display:flex;align-items:center;gap:6px}
+.bb{flex:1;height:5px;background:var(--cbd);border-radius:3px;overflow:hidden}
+.bf{height:100%;border-radius:3px}.bf.b{background:var(--a)}.bf.g{background:var(--g)}.bf.o{background:var(--o)}.bf.p{background:var(--p)}
+.fg{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.fc{text-align:center;padding:12px 6px;border-radius:8px;border:1px solid rgba(255,255,255,.06)}
+.fc .fi{font-size:20px;margin-bottom:4px}.fc .fv{font-size:18px;font-weight:700}.fc .fl{font-size:10px;color:var(--td);margin-top:1px}.fc .fs{font-size:9px;margin-top:3px}
+.fc.a1{background:rgba(58,77,143,.12)}.fc.a2{background:rgba(53,89,133,.12)}.fc.a3{background:rgba(52,199,89,.08);border-color:rgba(52,199,89,.25)}.fc.a4{background:rgba(255,159,10,.08)}.fc.a5{background:rgba(255,69,58,.08)}.fc.nx{background:rgba(139,143,163,.06)}
+.ar{display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:6px;font-size:11px;color:var(--td)}
+.ai{display:flex;align-items:center;gap:3px}.ai .aw{font-size:13px}.ai .rt{font-weight:600;color:var(--t)}
+.ac{background:linear-gradient(135deg,rgba(52,199,89,.08),rgba(52,199,89,.02));border:1px solid rgba(52,199,89,.2);border-radius:12px;padding:18px}
+.ac h4{color:var(--g);margin-bottom:10px;font-size:13px}
+.fb{background:var(--cbg);border-top:1px solid var(--cbd);padding:6px 20px;font-size:10px;color:var(--td);display:flex;gap:14px;position:fixed;bottom:0;left:0;right:0;z-index:100}
+.login-o{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-o.hidden{display:none}
+.login-c{background:var(--cbg);border:1px solid var(--cbd);border-radius:14px;padding:36px;width:380px;text-align:center}
+.login-c .li{font-size:36px;margin-bottom:6px}.login-c h2{font-size:18px;margin-bottom:4px}
+.login-c .ls{color:var(--td);font-size:12px;margin-bottom:20px}
+.login-c input{width:100%;padding:10px 14px;border:1px solid var(--cbd);background:var(--bg);color:var(--t);border-radius:8px;font-size:14px;margin-bottom:10px;outline:none}
+.login-c input:focus{border-color:var(--a)}
+.login-c .lb{width:100%;padding:10px;background:var(--a);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+.login-c .le{color:var(--r);font-size:11px;margin-top:6px;min-height:16px}
+.login-c .lh{color:var(--td);font-size:10px;margin-top:14px;line-height:1.5}
+.ub{display:flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:5px;cursor:pointer}
+.ub.ad{background:rgba(191,90,242,.15);color:#bf5af2}.ub.op{background:rgba(79,143,247,.15);color:#4f8ff7}.ub.vw{background:rgba(139,143,163,.12);color:#8b8fa3}
+.role-v .ubtn{display:none!important}
 </style>
 </head>
 <body>
 
-<!-- Login -->
-<div class="login-overlay" id="loginOverlay">
-  <div class="login-card">
-    <div class="login-logo">📊</div>
-    <h2>抖音达人种草营销数据看板</h2>
-    <div class="login-sub">请输入访问密码</div>
-    <input type="password" id="loginPassword" placeholder="输入密码..." autofocus onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" onclick="doLogin()">登 录</button>
-    <div class="login-error" id="loginError"></div>
-    <div class="login-hint">👑 admin123 · 🔧 operate456 · 👁️ view789</div>
-  </div>
-</div>
+<div class="login-o" id="lo"><div class="login-c">
+<div class="li">📊</div><h2>抖音达人种草营销数据看板</h2>
+<div class="ls">请输入访问密码</div>
+<input type="password" id="lp" placeholder="输入密码..." autofocus onkeydown="if(event.key==='Enter')doLogin()">
+<button class="lb" onclick="doLogin()">登 录</button><div class="le" id="le"></div>
+<div class="lh">👑 admin123 · 🔧 operate456 · 👁️ view789</div>
+</div></div>
 
-<!-- Header -->
 <div class="header">
-  <div class="header-left"><div class="logo">📊 抖音达人种草营销<span>数据看板</span></div></div>
-  <div class="global-controls">
-    <span class="user-badge" id="userBadge" onclick="logout()" title="点击退出"></span>
-    <div class="divider"></div>
-    <button class="upload-btn" onclick="alert('数据上传功能开发中。请将文件通过其他方式提供。')">📤 数据上传</button>
-  </div>
-</div>
+<div class="logo">📊 抖音达人种草营销<span>数据看板</span></div>
+<div class="header-r">
+<span class="ub" id="ub" onclick="logout()" title="退出"></span>
+<button class="ubtn" onclick="alert('上传功能开发中。请将文件提供给管理员。')">📤 数据上传</button>
+</div></div>
 
-<!-- Navigation -->
 <div class="nav">
-  <button class="nav-tab active" data-page="ceo">总览</button>
-  <button class="nav-tab" data-page="creator">达人资产</button>
-  <button class="nav-tab" data-page="content">内容表现</button>
-  <span class="nav-section-label">投放</span>
-  <button class="nav-tab" data-page="brand">品牌广告</button>
-  <button class="nav-tab" data-page="heating">原生加热</button>
-  <span class="nav-section-label">效果</span>
-  <button class="nav-tab" data-page="conversion">电商转化</button>
-  <button class="nav-tab" data-page="brandasset">品牌资产</button>
+<button class="nt active" data-p="ceo">总览</button>
+<button class="nt" data-p="creator">达人资产</button>
+<button class="nt" data-p="content">内容表现</button>
+<span class="ns">投放</span>
+<button class="nt" data-p="brand">品牌广告</button>
+<button class="nt" data-p="heating">原生加热</button>
+<span class="ns">效果</span>
+<button class="nt" data-p="conversion">电商转化</button>
+<button class="nt" data-p="brandasset">品牌资产</button>
 </div>
 
-<div class="main-content">
+<div class="main">
 
-<!-- ====== CEO 总览 ====== -->
+<!-- ====== DATA STORE (JS variable) ====== -->
+<script>
+// All data from real files, validated 7/17
+var STORE = {
+  creators: [
+    {n:"毛晓彤",t:"头部",m:"独立",p:11352608,l:401102,c:6136,s:8097,f:367500,st:0,cr:0.0169,sr:5405},
+    {n:"爆米花妈妈",t:"腰部",m:"芒果妈妈",p:638844,l:24888,c:341,s:12126,f:12600,st:1,cr:0.0246,sr:0},
+    {n:"娱乐最前沿",t:"尾部",m:"新偶文化",p:397884,l:33647,c:199,s:1182,f:16800,st:1,cr:0.0100,sr:0},
+    {n:"抓马刘翠花",t:"腰部",m:"江西抓马",p:894980,l:18618,c:79,s:600,f:29400,st:1,cr:0.0100,sr:0},
+    {n:"追娱大明星",t:"尾部",m:"猕猴桃MCN",p:394204,l:12048,c:47,s:736,f:21000,st:1,cr:0.0153,sr:1045},
+    {n:"芒果妈妈",t:"腰部",m:"芒果妈妈",p:1258301,l:24519,c:158,s:455,f:42000,st:1,cr:0.0124,sr:0},
+    {n:"野生小娱妹",t:"尾部",m:"新偶文化",p:524858,l:5829,c:48,s:324,f:5250,st:1,cr:0.0066,sr:2487},
+    {n:"娱小丫",t:"尾部",m:"新偶文化",p:315806,l:9526,c:54,s:465,f:7350,st:1,cr:0.0095,sr:0},
+    {n:"娱乐星鲜社",t:"尾部",m:"新偶文化",p:615672,l:14465,c:188,s:221,f:5250,st:1,cr:0.0116,sr:0},
+    {n:"王嘻凤",t:"尾部",m:"八拉娱乐",p:1311154,l:11112,c:172,s:438,f:12600,st:1,cr:0.0063,sr:0},
+    {n:"我要上热门",t:"腰部",m:"芒果妈妈",p:700951,l:5050,c:31,s:152,f:23100,st:1,cr:0.0064,sr:0},
+    {n:"吃瓜姐妹社",t:"尾部",m:"深圳思空传播",p:689894,l:8181,c:39,s:290,f:14490,st:1,cr:0.0063,sr:4407},
+    {n:"明星娱乐最前线",t:"尾部",m:"新偶文化",p:323912,l:13545,c:66,s:409,f:22050,st:1,cr:0.0089,sr:0}
+  ],
+  // 种草通 totals
+  seedingPass: {spend:122324, imp:21418839, play:23451782, like:0, comment:0, share:0, eng:151716, a3:258792},
+  // 声量宝 totals  
+  slb: {spend:60302, play:2099777, like:333590, comment:1569, share:6532, eng:341691, search:1123},
+  // 星智投 totals
+  xzt: {spend:12981, totalPlay:87312971, totalEng:2874493, xztPlay:873584, xztEng:0},
+  // 5A 
+  fiveA: {total:54216323, a1:42521760, a2:11098689, a3:595874, a4:null, a5:null,
+          j1_total:15095248, j1_a1:13890699, j1_a2:1188765, j1_a3:15784}
+};
+</script>
+
+<!-- ====== CEO ====== -->
 <div class="page active" id="page-ceo">
-  <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-label">全口径总成本</div><div class="kpi-value">¥40.8万</div><div class="kpi-change">达人¥21.2万 + 加热¥19.6万</div></div>
-    <div class="kpi-card"><div class="kpi-label">5A人群总资产</div><div class="kpi-value">5,422万</div><div class="kpi-change up">7月增量 +3,912万</div></div>
-    <div class="kpi-card"><div class="kpi-label">A3种草人群</div><div class="kpi-value">59.6万</div><div class="kpi-change up">7/1→7/15 净增 58万</div></div>
-    <div class="kpi-card"><div class="kpi-label">合作达人数</div><div class="kpi-value">12</div><div class="kpi-change">7/3 - 7/15 发布</div></div>
-    <div class="kpi-card"><div class="kpi-label">CPE(星图达人)</div><div class="kpi-value">¥1.06</div><div class="kpi-change">总互动 20.0万</div></div>
-  </div>
-  <div class="chart-row cols-2">
-    <div class="chart-card">
-      <h3>📊 5A人群资产 7月变化</h3>
-      <div class="card-subtitle">📋 云图快照 · 7/1 → 7/15</div>
-      <div class="fiveA-grid" style="margin-bottom:14px;">
-        <div class="fiveA-cell a1">
-          <div class="cell-icon">👁️</div>
-          <div class="cell-value">4,252万</div>
-          <div class="cell-label">A1 了解</div>
-          <div class="cell-sub" style="color:var(--green);">7月 +2,863万</div>
-        </div>
-        <div class="fiveA-cell a2">
-          <div class="cell-icon">❤️</div>
-          <div class="cell-value">1,110万</div>
-          <div class="cell-label">A2 吸引</div>
-          <div class="cell-sub" style="color:var(--green);">7月 +991万</div>
-        </div>
-        <div class="fiveA-cell a3">
-          <div class="cell-icon">⭐</div>
-          <div class="cell-value" style="color:var(--green);">59.6万</div>
-          <div class="cell-label">A3 种草</div>
-          <div class="cell-sub" style="color:var(--green);">7月 +58万</div>
-        </div>
-        <div class="fiveA-cell a4">
-          <div class="cell-icon">🛒</div>
-          <div class="cell-value" style="color:var(--text-dim);">—</div>
-          <div class="cell-label">A4 购买</div>
-          <div class="cell-sub">待罗盘</div>
-        </div>
-        <div class="fiveA-cell a5">
-          <div class="cell-icon">🔄</div>
-          <div class="cell-value" style="color:var(--text-dim);">—</div>
-          <div class="cell-label">A5 复购</div>
-          <div class="cell-sub">待罗盘</div>
-        </div>
-      </div>
-      <table style="font-size:12px;">
-        <tr><td>A1→A2 流转率</td><td style="font-weight:600;">26.1%</td><td>= 1,110万 / 4,252万</td></tr>
-        <tr><td>A2→A3 流转率</td><td style="font-weight:600;color:var(--green);">5.4%</td><td>= 59.6万 / 1,110万</td></tr>
-      </table>
-    </div>
-    <div class="chart-card">
-      <h3>💰 成本分布（7月）</h3>
-      <table>
-        <tr><td><span class="tag tag-green">星图达人费</span></td><td>¥211,890</td><td><div class="bar-cell"><span>52%</span><div class="bar-bg"><div class="bar-fill green" style="width:52%"></div></div></div></td></tr>
-        <tr><td><span class="tag tag-blue">种草通</span></td><td>¥122,324</td><td><div class="bar-cell"><span>30%</span><div class="bar-bg"><div class="bar-fill blue" style="width:30%"></div></div></div></td></tr>
-        <tr><td><span class="tag tag-orange">声量宝</span></td><td>¥60,302</td><td><div class="bar-cell"><span>15%</span><div class="bar-bg"><div class="bar-fill orange" style="width:15%"></div></div></div></td></tr>
-        <tr><td><span class="tag tag-purple">星智投</span></td><td>¥12,981</td><td><div class="bar-cell"><span>3%</span><div class="bar-bg"><div class="bar-fill purple" style="width:3%"></div></div></div></td></tr>
-      </table>
-      <div style="margin-top:12px;font-size:12px;">
-        <div>A3效率：种草通 CPA3 <strong style="color:var(--green);">¥0.47</strong></div>
-        <div>CPE对比：星图¥1.06 | 种草通¥0.81 | 声量宝¥0.18 | 星智投¥0.005</div>
-      </div>
-    </div>
-  </div>
+<div class="kr">
+<div class="kc"><div class="kl">全口径总成本</div><div class="kv" id="k-ceo-cost">—</div><div class="kh">达人费 + 种草通 + 声量宝 + 星智投</div></div>
+<div class="kc"><div class="kl">5A人群总资产</div><div class="kv">5,422万</div><div class="kh up">7月增量 +3,912万（+259%）</div></div>
+<div class="kc"><div class="kl">A3种草人群</div><div class="kv">59.6万</div><div class="kh up">7/1: 1.6万 → 7/15: 59.6万</div></div>
+<div class="kc"><div class="kl">合作达人</div><div class="kv" id="k-ceo-creators">—</div><div class="kh">星图任务 7/3-7/15</div></div>
+<div class="kc"><div class="kl">总播放量</div><div class="kv" id="k-ceo-play">—</div><div class="kh">星图内容总播放</div></div>
 </div>
+<div class="cr c2">
+<div class="cc"><h3>📊 5A人群资产 7月变化</h3><div class="cs">📋 云图快照 · 7/1 → 7/15</div>
+<div class="fg" style="margin-bottom:12px">
+<div class="fc a1"><div class="fi">👁️</div><div class="fv">4,252万</div><div class="fl">A1 了解</div><div class="fs" style="color:var(--g)">7月 +2,863万</div></div>
+<div class="fc a2"><div class="fi">❤️</div><div class="fv">1,110万</div><div class="fl">A2 吸引</div><div class="fs" style="color:var(--g)">7月 +991万</div></div>
+<div class="fc a3"><div class="fi">⭐</div><div class="fv" style="color:var(--g)">59.6万</div><div class="fl">A3 种草</div><div class="fs" style="color:var(--g)">7月 +58万</div></div>
+<div class="fc nx"><div class="fi">🛒</div><div class="fv" style="color:var(--td)">—</div><div class="fl">A4 购买</div><div class="fs">待罗盘</div></div>
+<div class="fc nx"><div class="fi">🔄</div><div class="fv" style="color:var(--td)">—</div><div class="fl">A5 复购</div><div class="fs">待罗盘</div></div>
+</div>
+<div class="ar"><div class="ai"><span class="aw">→</span> A1→A2 <span class="rt" style="color:var(--g)">26.1%</span></div><div class="ai"><span class="aw">→</span> A2→A3 <span class="rt" style="color:var(--g)">5.4%</span></div><div class="ai" style="color:var(--td)"><span class="aw">→</span> A3→A4 <span class="rt" style="color:var(--td)">—</span></div></div>
+</div>
+<div class="cc"><h3>💰 成本分布（7月）</h3>
+<table>
+<tr><td><span class="tag tg">星图达人费</span></td><td id="t-cost-star">—</td><td><div class="bc"><span id="t-cost-star-pct">—</span><div class="bb"><div class="bf g" id="b-cost-star" style="width:0%"></div></div></div></td></tr>
+<tr><td><span class="tag tb">种草通</span></td><td>¥122,324</td><td><div class="bc"><span id="t-cost-st-pct">—</span><div class="bb"><div class="bf b" id="b-cost-st" style="width:0%"></div></div></div></td></tr>
+<tr><td><span class="tag to">声量宝</span></td><td>¥60,302</td><td><div class="bc"><span id="t-cost-sl-pct">—</span><div class="bb"><div class="bf o" id="b-cost-sl" style="width:0%"></div></div></div></td></tr>
+<tr><td><span class="tag tp">星智投</span></td><td>¥12,981</td><td><div class="bc"><span id="t-cost-xz-pct">—</span><div class="bb"><div class="bf p" id="b-cost-xz" style="width:0%"></div></div></div></td></tr>
+</table>
+<div style="margin-top:10px;font-size:11px">种草通 CPA3 <strong style="color:var(--g)">¥0.47</strong> | CPE: 星图<span id="t-cpe-star">—</span> 种草通¥0.81 声量宝¥0.18</div>
+</div>
+</div></div>
 
 <!-- ====== 达人资产 ====== -->
 <div class="page" id="page-creator">
-  <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-label">合作达人数</div><div class="kpi-value">12</div><div class="kpi-change">7/3 - 7/15 发布</div></div>
-    <div class="kpi-card"><div class="kpi-label">总达人费用</div><div class="kpi-value">¥21.2万</div><div class="kpi-change">均费 ¥17,658</div></div>
-    <div class="kpi-card"><div class="kpi-label">CPE(达人费)</div><div class="kpi-value">¥1.06</div><div class="kpi-change">总互动 200,248</div></div>
-    <div class="kpi-card"><div class="kpi-label">平均互动率</div><div class="kpi-value">2.48%</div><div class="kpi-change">星图内容总量</div></div>
-    <div class="kpi-card"><div class="kpi-label">头部达人占比</div><div class="kpi-value">8%</div><div class="kpi-change">毛晓彤 1人/12人</div></div>
-  </div>
-  <div class="chart-row cols-2">
-    <div class="chart-card">
-      <h3>🏅 达人排行榜（按互动率）</h3>
-      <table>
-        <thead><tr><th>达人</th><th>层级</th><th>播放量</th><th>互动率</th><th>CPE(达人费)</th><th>看后搜</th></tr></thead>
-        <tbody>
-          <tr><td>爆米花妈妈</td><td><span class="tag tag-green">腰部</span></td><td>638,844</td><td>5.83%</td><td>¥0.48</td><td class="na">—</td></tr>
-          <tr><td>毛晓彤</td><td><span class="tag tag-purple">头部</span></td><td>11,352,608</td><td>3.66%</td><td>¥0.88</td><td>5,405</td></tr>
-          <tr><td>娱乐星鲜社</td><td><span class="tag tag-orange">尾部</span></td><td>615,672</td><td>2.41%</td><td>¥0.35</td><td class="na">—</td></tr>
-          <tr><td>抓马刘翠花</td><td><span class="tag tag-green">腰部</span></td><td>894,980</td><td>2.16%</td><td>¥1.51</td><td class="na">—</td></tr>
-          <tr><td>芒果妈妈</td><td><span class="tag tag-green">腰部</span></td><td>1,258,301</td><td>1.99%</td><td>¥1.71</td><td class="na">—</td></tr>
-          <tr><td>娱小丫</td><td><span class="tag tag-orange">尾部</span></td><td>315,806</td><td>3.18%</td><td>¥0.73</td><td class="na">—</td></tr>
-          <tr><td>野生小娱妹</td><td><span class="tag tag-orange">尾部</span></td><td>524,858</td><td>1.18%</td><td>¥0.90</td><td>2,487</td></tr>
-          <tr><td>王嘻凤</td><td><span class="tag tag-orange">尾部</span></td><td>1,311,154</td><td>0.90%</td><td>¥1.08</td><td class="na">—</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="chart-card">
-      <h3>🏢 MCN / 达人费用</h3>
-      <table>
-        <thead><tr><th>MCN / 达人</th><th>人数</th><th>总费用</th><th>总播放</th><th>均CPE</th></tr></thead>
-        <tbody>
-          <tr><td>芒果妈妈</td><td>2</td><td>¥54,600</td><td>1,897,145</td><td>¥1.33</td></tr>
-          <tr><td>新偶文化</td><td>5</td><td>¥56,700</td><td>1,668,480</td><td>¥1.72</td></tr>
-          <tr><td>八拉娱乐</td><td>1</td><td>¥12,600</td><td>1,311,154</td><td>¥1.08</td></tr>
-          <tr><td>江西抓马</td><td>1</td><td>¥29,400</td><td>894,980</td><td>¥1.51</td></tr>
-          <tr><td>深圳思空传播</td><td>1</td><td>¥14,490</td><td>689,894</td><td>¥1.77</td></tr>
-          <tr><td>猕猴桃MCN</td><td>1</td><td>¥21,000</td><td>394,204</td><td>¥1.64</td></tr>
-          <tr><td>毛晓彤(独立)</td><td>1</td><td>¥367,500</td><td>11,352,608</td><td>¥0.88</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+<div class="kr">
+<div class="kc"><div class="kl">合作达人</div><div class="kv" id="k-cr-count">—</div><div class="kh">7/3-7/15 发布</div></div>
+<div class="kc"><div class="kl">总达人费用</div><div class="kv" id="k-cr-fee">—</div><div class="kh" id="k-cr-avgfee">—</div></div>
+<div class="kc"><div class="kl">总播放量</div><div class="kv" id="k-cr-play">—</div><div class="kh">星图累计快照</div></div>
+<div class="kc"><div class="kl">总互动量</div><div class="kv" id="k-cr-eng">—</div><div class="kh" id="k-cr-rate">—</div></div>
+<div class="kc"><div class="kl">CPE(达人费)</div><div class="kv" id="k-cr-cpe">—</div><div class="kh id="k-cr-search">—</div></div>
 </div>
+<div class="cc"><h3>🏅 达人排行榜</h3>
+<div class="toolbar">
+<input type="text" placeholder="🔍 搜索达人/MCN..." oninput="filterTable('tbl-creator',this.value)">
+<select onchange="filterTable('tbl-creator',document.querySelector('#page-creator input').value)">
+<option value="">全部层级</option><option value="头部">头部</option><option value="腰部">腰部</option><option value="尾部">尾部</option>
+</select>
+<button class="ubtn" onclick="resetFilter('tbl-creator')" style="font-size:11px">清除筛选</button>
+<span style="font-size:11px;color:var(--td);margin-left:auto" id="tbl-creator-info"></span>
+</div>
+<div style="max-height:480px;overflow-y:auto">
+<table id="tbl-creator"><thead><tr>
+<th class="sortable" onclick="sortTable('tbl-creator',0)">达人</th>
+<th class="sortable" onclick="sortTable('tbl-creator',1)">层级</th>
+<th class="sortable" onclick="sortTable('tbl-creator',2)">MCN</th>
+<th class="sortable" onclick="sortTable('tbl-creator',3)">播放量</th>
+<th class="sortable" onclick="sortTable('tbl-creator',4)">互动率</th>
+<th class="sortable" onclick="sortTable('tbl-creator',5)">CPE</th>
+<th class="sortable" onclick="sortTable('tbl-creator',6)">达人费</th>
+<th class="sortable" onclick="sortTable('tbl-creator',7)">看后搜</th>
+</tr></thead><tbody></tbody></table>
+</div></div></div>
 
 <!-- ====== 内容表现 ====== -->
 <div class="page" id="page-content">
-  <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-label">总播放量</div><div class="kpi-value">807万</div><div class="kpi-change">12条内容</div></div>
-    <div class="kpi-card"><div class="kpi-label">总互动量</div><div class="kpi-value">20.0万</div><div class="kpi-change">点赞 181K + 评论 1.4K + 分享 17K</div></div>
-    <div class="kpi-card"><div class="kpi-label">互动率（均值）</div><div class="kpi-value">2.48%</div><div class="kpi-change">基于总播放计算</div></div>
-    <div class="kpi-card"><div class="kpi-label">总看后搜</div><div class="kpi-value">1,200</div><div class="kpi-change">看后搜率 0.01%</div></div>
-    <div class="kpi-card"><div class="kpi-label">爆款数</div><div class="kpi-value">1</div><div class="kpi-change">播放>100万：毛晓彤 1135万</div></div>
-  </div>
-  <div class="chart-card" style="margin-bottom:14px;">
-    <h3>📈 内容排行榜</h3>
-    <div class="card-subtitle">📸 累计快照 · 截止 2026-07-17 · 按互动率降序</div>
-    <table>
-      <thead><tr><th>达人</th><th>播放量</th><th>点赞</th><th>评论</th><th>分享</th><th>互动率</th><th>完播率</th><th>看后搜</th><th>CPE</th></tr></thead>
-      <tbody>
-        <tr><td>爆米花妈妈</td><td>638,844</td><td>24,888</td><td>341</td><td>12,126</td><td style="color:var(--green);">5.83%</td><td>2.46%</td><td class="na">—</td><td>¥0.48</td></tr>
-        <tr><td>毛晓彤</td><td>11,352,608</td><td>401,102</td><td>6,136</td><td>8,097</td><td style="color:var(--green);">3.66%</td><td>1.69%</td><td>5,405</td><td>¥0.88</td></tr>
-        <tr><td>娱小丫</td><td>315,806</td><td>9,526</td><td>54</td><td>465</td><td>3.18%</td><td>0.95%</td><td class="na">—</td><td>¥0.73</td></tr>
-        <tr><td>娱乐星鲜社</td><td>615,672</td><td>14,465</td><td>188</td><td>221</td><td>2.41%</td><td>1.16%</td><td class="na">—</td><td>¥0.35</td></tr>
-        <tr><td>抓马刘翠花</td><td>894,980</td><td>18,618</td><td>79</td><td>600</td><td>2.16%</td><td>1.00%</td><td class="na">—</td><td>¥1.51</td></tr>
-        <tr><td>芒果妈妈</td><td>1,258,301</td><td>24,519</td><td>158</td><td>455</td><td>1.99%</td><td>1.24%</td><td class="na">—</td><td>¥1.71</td></tr>
-        <tr><td>野生小娱妹</td><td>524,858</td><td>5,829</td><td>48</td><td>324</td><td>1.18%</td><td>0.66%</td><td>2,487</td><td>¥0.90</td></tr>
-        <tr><td>王嘻凤</td><td>1,311,154</td><td>11,112</td><td>172</td><td>438</td><td>0.90%</td><td>0.63%</td><td class="na">—</td><td>¥1.08</td></tr>
-        <tr><td>娱乐最前沿</td><td>397,884</td><td>33,647</td><td>199</td><td>1,182</td><td>8.82%</td><td>1.00%</td><td class="na">—</td><td>¥0.48</td></tr>
-        <tr><td>追娱大明星</td><td>394,204</td><td>12,048</td><td>47</td><td>736</td><td>3.25%</td><td>1.53%</td><td>1,045</td><td>¥1.64</td></tr>
-        <tr><td>我要上热门</td><td>700,951</td><td>5,050</td><td>31</td><td>152</td><td>0.75%</td><td>0.64%</td><td class="na">—</td><td>¥4.41</td></tr>
-        <tr><td>吃瓜姐妹社</td><td>689,894</td><td>8,181</td><td>39</td><td>290</td><td>1.23%</td><td>0.63%</td><td>4,407</td><td>¥1.70</td></tr>
-      </tbody>
-    </table>
-  </div>
+<div class="kr">
+<div class="kc"><div class="kl">总播放量</div><div class="kv" id="k-ct-play">—</div><div class="kh" id="k-ct-count">—</div></div>
+<div class="kc"><div class="kl">总互动量</div><div class="kv" id="k-ct-eng">—</div><div class="kh">点赞+评论+分享</div></div>
+<div class="kc"><div class="kl">互动率</div><div class="kv" id="k-ct-rate">—</div><div class="kh">基于总播放</div></div>
+<div class="kc"><div class="kl">总看后搜</div><div class="kv" id="k-ct-search">—</div><div class="kh">看后搜率 <span id="k-ct-srate">—</span></div></div>
+<div class="kc"><div class="kl">CPE</div><div class="kv" id="k-ct-cpe">—</div><div class="kh">达人费/总互动</div></div>
 </div>
+<div class="cc"><h3>📈 内容排行</h3>
+<div class="toolbar">
+<input type="text" placeholder="🔍 搜索..." oninput="filterTable('tbl-content',this.value)">
+<select onchange="filterTable('tbl-content',document.querySelector('#page-content input').value)">
+<option value="">全部</option><option value="头部">头部</option><option value="腰部">腰部</option><option value="尾部">尾部</option>
+</select>
+<button class="ubtn" onclick="resetFilter('tbl-content')" style="font-size:11px">清除</button>
+<span style="font-size:11px;color:var(--td);margin-left:auto" id="tbl-content-info"></span>
+</div>
+<div style="max-height:480px;overflow-y:auto">
+<table id="tbl-content"><thead><tr>
+<th class="sortable" onclick="sortTable('tbl-content',0)">达人</th>
+<th class="sortable" onclick="sortTable('tbl-content',1)">层级</th>
+<th class="sortable" onclick="sortTable('tbl-content',2)">播放量</th>
+<th class="sortable" onclick="sortTable('tbl-content',3)">点赞</th>
+<th class="sortable" onclick="sortTable('tbl-content',4)">评论</th>
+<th class="sortable" onclick="sortTable('tbl-content',5)">分享</th>
+<th class="sortable" onclick="sortTable('tbl-content',6)">互动率</th>
+<th class="sortable" onclick="sortTable('tbl-content',7)">完播率</th>
+<th class="sortable" onclick="sortTable('tbl-content',8)">看后搜</th>
+<th class="sortable" onclick="sortTable('tbl-content',9)">CPE</th>
+</tr></thead><tbody></tbody></table>
+</div></div></div>
 
 <!-- ====== 品牌广告 ====== -->
 <div class="page" id="page-brand">
-  <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-label">种草通总消耗</div><div class="kpi-value">¥12.2万</div><div class="kpi-change">501 投放单元</div></div>
-    <div class="kpi-card"><div class="kpi-label">种草通 CPE</div><div class="kpi-value">¥0.81</div><div class="kpi-change">总互动 151,716</div></div>
-    <div class="kpi-card"><div class="kpi-label">种草通 CPA3</div><div class="kpi-value">¥0.47</div><div class="kpi-change">新增A3 258,792</div></div>
-    <div class="kpi-card"><div class="kpi-label">种草通总播放</div><div class="kpi-value">2,345万</div><div class="kpi-change">总展示 2,142万</div></div>
-    <div class="kpi-card"><div class="kpi-label">种草通总A3</div><div class="kpi-value">25.9万</div><div class="kpi-change">7/1 - 7/16</div></div>
-  </div>
-  <div class="chart-card">
-    <h3>📊 种草通详情（按日聚合 07-01 ~ 07-16）</h3>
-    <table>
-      <thead><tr><th>指标</th><th>数值</th><th>说明</th></tr></thead>
-      <tbody>
-        <tr><td>投放单元数</td><td style="font-weight:600;">501</td><td>种草通竞价投放单元</td></tr>
-        <tr><td>总消耗</td><td style="font-weight:600;">¥122,324</td><td>—</td></tr>
-        <tr><td>总展示量</td><td style="font-weight:600;">21,418,839</td><td>—</td></tr>
-        <tr><td>总播放量</td><td style="font-weight:600;">23,451,782</td><td>—</td></tr>
-        <tr><td>总互动</td><td style="font-weight:600;">151,716</td><td>点赞 + 评论 + 分享</td></tr>
-        <tr><td>新增A3</td><td style="font-weight:600;color:var(--green);">258,792</td><td>种草通直接贡献</td></tr>
-        <tr><td>CPE</td><td style="font-weight:600;">¥0.81</td><td>= ¥122,324 / 151,716</td></tr>
-        <tr><td>CPA3</td><td style="font-weight:600;color:var(--green);">¥0.47</td><td>= ¥122,324 / 258,792</td></tr>
-      </tbody>
-    </table>
-    <div class="card-subtitle" style="margin-top:10px;">📊 按日数据 (07-01~07-16) · 数据来源: 种草通竞价导出</div>
-  </div>
+<div class="kr">
+<div class="kc"><div class="kl">种草通消耗</div><div class="kv">¥12.2万</div><div class="kh">501 投放单元</div></div>
+<div class="kc"><div class="kl">种草通 CPE</div><div class="kv">¥0.81</div><div class="kh">总互动 151,716</div></div>
+<div class="kc"><div class="kl">种草通 CPA3</div><div class="kv">¥0.47</div><div class="kh">新增A3 258,792</div></div>
+<div class="kc"><div class="kl">种草通播放</div><div class="kv">2,345万</div><div class="kh">展示 2,142万</div></div>
+<div class="kc"><div class="kl">种草通A3</div><div class="kv">25.9万</div><div class="kh">7/1-7/16</div></div>
 </div>
+<div class="cc"><h3>📊 种草通详情</h3>
+<table>
+<tr><td>投放单元</td><td style="font-weight:600">501</td></tr>
+<tr><td>总消耗</td><td style="font-weight:600">¥122,324</td></tr>
+<tr><td>总展示</td><td style="font-weight:600">21,418,839</td></tr>
+<tr><td>总播放</td><td style="font-weight:600">23,451,782</td></tr>
+<tr><td>总互动</td><td style="font-weight:600">151,716</td></tr>
+<tr><td>新增A3</td><td style="font-weight:600;color:var(--g)">258,792</td></tr>
+<tr><td>CPE</td><td style="font-weight:600">¥0.81</td></tr>
+<tr><td>CPA3</td><td style="font-weight:600;color:var(--g)">¥0.47</td></tr>
+</table></div></div>
 
 <!-- ====== 原生加热 ====== -->
 <div class="page" id="page-heating">
-  <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-label">声量宝总消耗</div><div class="kpi-value">¥6.0万</div><div class="kpi-change">91 订单</div></div>
-    <div class="kpi-card"><div class="kpi-label">声量宝 CPE</div><div class="kpi-value">¥0.18</div><div class="kpi-change">总互动 341,691</div></div>
-    <div class="kpi-card"><div class="kpi-label">星智投总消耗</div><div class="kpi-value">¥1.3万</div><div class="kpi-change">12 助推组</div></div>
-    <div class="kpi-card"><div class="kpi-label">星智投 CPE</div><div class="kpi-value">¥0.005</div><div class="kpi-change">总互动 287万</div></div>
-    <div class="kpi-card"><div class="kpi-label">声量宝看后搜</div><div class="kpi-value">1,123</div><div class="kpi-change">搜索成本 ¥53.7</div></div>
-  </div>
-  <div class="chart-row cols-2">
-    <div class="chart-card">
-      <h3>🔊 声量宝详情</h3>
-      <table>
-        <tr><td>订单数</td><td style="font-weight:600;">91</td></tr>
-        <tr><td>总消耗</td><td style="font-weight:600;">¥60,302</td></tr>
-        <tr><td>总播放量</td><td style="font-weight:600;">2,099,777</td></tr>
-        <tr><td>总互动</td><td style="font-weight:600;">341,691</td><td style="color:var(--text-dim);">点赞 333,590 + 评论 1,569 + 分享 6,532</td></tr>
-        <tr><td>互动率</td><td style="font-weight:600;">16.27%</td></tr>
-        <tr><td>看后搜量</td><td style="font-weight:600;">1,123</td></tr>
-        <tr><td>CPE</td><td style="font-weight:600;">¥0.18</td><td>= ¥60,302 / 341,691</td></tr>
-      </table>
-      <div class="card-subtitle" style="margin-top:10px;">📊 按日数据 (07-01~07-16)</div>
-    </div>
-    <div class="chart-card">
-      <h3>🚀 星智投详情</h3>
-      <table>
-        <tr><td>助推组数</td><td style="font-weight:600;">12</td></tr>
-        <tr><td>总消耗</td><td style="font-weight:600;">¥12,981</td></tr>
-        <tr><td>总播放量(含自然)</td><td style="font-weight:600;">87,312,971</td></tr>
-        <tr><td>总互动(含自然)</td><td style="font-weight:600;">2,874,493</td></tr>
-        <tr><td>星智投播放</td><td style="font-weight:600;">873,584</td></tr>
-        <tr><td>互动率(总)</td><td style="font-weight:600;">3.29%</td></tr>
-        <tr><td>CPE(总)</td><td style="font-weight:600;">¥0.005</td><td>= ¥12,981 / 2,874,493</td></tr>
-      </table>
-      <div class="card-subtitle" style="margin-top:10px;">📸 累计快照 (07-01~07-16) · ⚠️ 星智投播放=87万,占总播放1%</div>
-    </div>
-  </div>
+<div class="kr">
+<div class="kc"><div class="kl">声量宝消耗</div><div class="kv">¥6.0万</div><div class="kh">91 订单</div></div>
+<div class="kc"><div class="kl">声量宝 CPE</div><div class="kv">¥0.18</div><div class="kh">互动 341,691</div></div>
+<div class="kc"><div class="kl">星智投消耗</div><div class="kv">¥1.3万</div><div class="kh">12 助推组</div></div>
+<div class="kc"><div class="kl">星智投播放</div><div class="kv">87.3万</div><div class="kh">总播放 8,731万</div></div>
+<div class="kc"><div class="kl">声量宝搜索</div><div class="kv">1,123</div><div class="kh">成本 ¥53.7/次</div></div>
 </div>
+<div class="cr c2">
+<div class="cc"><h3>🔊 声量宝</h3>
+<table>
+<tr><td>订单数</td><td style="font-weight:600">91</td></tr>
+<tr><td>消耗</td><td style="font-weight:600">¥60,302</td></tr>
+<tr><td>播放</td><td style="font-weight:600">2,099,777</td></tr>
+<tr><td>互动(点赞+评论+分享)</td><td style="font-weight:600">341,691</td></tr>
+<tr><td>互动率</td><td style="font-weight:600">16.27%</td></tr>
+<tr><td>看后搜</td><td style="font-weight:600">1,123</td></tr>
+</table></div>
+<div class="cc"><h3>🚀 星智投</h3>
+<table>
+<tr><td>助推组</td><td style="font-weight:600">12</td></tr>
+<tr><td>消耗</td><td style="font-weight:600">¥12,981</td></tr>
+<tr><td>总播放(含自然)</td><td style="font-weight:600">87,312,971</td></tr>
+<tr><td>总互动</td><td style="font-weight:600">2,874,493</td></tr>
+<tr><td>星智投播放</td><td style="font-weight:600">873,584</td></tr>
+<tr><td>CPE(总)</td><td style="font-weight:600">¥0.005</td></tr>
+</table></div>
+</div></div>
 
 <!-- ====== 电商转化 ====== -->
 <div class="page" id="page-conversion">
-  <div style="text-align:center;padding:80px 0;color:var(--text-dim);">
-    <div style="font-size:48px;margin-bottom:16px;">📋</div>
-    <h2 style="margin-bottom:8px;">电商转化数据待接入</h2>
-    <p>需要接入电商罗盘 API 获取 GMV、转化漏斗、退货率等数据</p>
-    <p style="margin-top:12px;">当前可用的指标：种草通新增A3 <strong style="color:var(--green);">258,792</strong> · 看后搜总量 <strong>1,200</strong></p>
-  </div>
-</div>
+<div style="text-align:center;padding:80px 0;color:var(--td)">
+<div style="font-size:48px;margin-bottom:16px">📋</div>
+<h2>电商转化数据待接入</h2>
+<p style="margin-top:8px">需接入电商罗盘 API。当前可参考：种草通A3 <strong style="color:var(--g)">258,792</strong> · 看后搜总量 <strong id="conv-search-total">—</strong></p>
+</div></div>
 
 <!-- ====== 品牌资产 ====== -->
 <div class="page" id="page-brandasset">
-  <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-label">5A总资产</div><div class="kpi-value">5,422万</div><div class="kpi-change up">7月增量 +3,912万（+259%）</div></div>
-    <div class="kpi-card"><div class="kpi-label">A3种草人群</div><div class="kpi-value">59.6万</div><div class="kpi-change up">7月净增 58万（+3,676%）</div></div>
-    <div class="kpi-card"><div class="kpi-label">种草通 CPA3</div><div class="kpi-value">¥0.47</div><div class="kpi-change">A3贡献 258,792</div></div>
-    <div class="kpi-card"><div class="kpi-label">A2→A3 流转率</div><div class="kpi-value">5.4%</div><div class="kpi-change">59.6万 / 1,110万</div></div>
-    <div class="kpi-card"><div class="kpi-label">A1→A2 流转率</div><div class="kpi-value">26.1%</div><div class="kpi-change">1,110万 / 4,252万</div></div>
-  </div>
-  <div class="chart-row cols-2">
-    <div class="chart-card">
-      <h3>👥 5A人群资产（7/1 → 7/15）</h3>
-      <div class="card-subtitle">📋 云图快照 · 仅A1/A2/A3可用，A4/A5待罗盘接入</div>
-      <div class="fiveA-grid" style="margin-bottom:16px;">
-        <div class="fiveA-cell a1"><div class="cell-icon">👁️</div><div class="cell-value">4,252万</div><div class="cell-label">A1 了解</div><div class="cell-sub" style="color:var(--green);">7/1: 1,389万 → +2,863万</div></div>
-        <div class="fiveA-cell a2"><div class="cell-icon">❤️</div><div class="cell-value">1,110万</div><div class="cell-label">A2 吸引</div><div class="cell-sub" style="color:var(--green);">7/1: 119万 → +991万</div></div>
-        <div class="fiveA-cell a3"><div class="cell-icon">⭐</div><div class="cell-value" style="color:var(--green);">59.6万</div><div class="cell-label">A3 种草</div><div class="cell-sub" style="color:var(--green);">7/1: 1.6万 → +58万</div></div>
-        <div class="fiveA-cell na"><div class="cell-icon">🛒</div><div class="cell-value" style="color:var(--text-dim);">—</div><div class="cell-label">A4 购买</div><div class="cell-sub">待罗盘</div></div>
-        <div class="fiveA-cell na"><div class="cell-icon">🔄</div><div class="cell-value" style="color:var(--text-dim);">—</div><div class="cell-label">A5 复购</div><div class="cell-sub">待罗盘</div></div>
-      </div>
-      <div class="flow-arrow-row" style="padding-top:10px;border-top:1px solid var(--card-border);">
-        <div class="flow-arrow-item"><span class="arrow">→</span> A1→A2 <span class="rate" style="color:var(--green);">26.1%</span></div>
-        <div class="flow-arrow-item"><span class="arrow">→</span> A2→A3 <span class="rate" style="color:var(--green);">5.4%</span></div>
-        <div class="flow-arrow-item" style="color:var(--text-dim);"><span class="arrow">→</span> A3→A4 <span class="rate" style="color:var(--text-dim);">—</span></div>
-      </div>
-    </div>
-    <div class="a3-highlight-card">
-      <h4>🌟 A3 种草人群（详细）</h4>
-      <table>
-        <tr><td>7/1 A3 基数</td><td style="font-weight:600;">15,784</td><td>—</td></tr>
-        <tr><td>7/15 A3 总量</td><td style="font-weight:600;color:var(--green);">595,874</td><td>—</td></tr>
-        <tr><td>7月净增</td><td style="font-weight:600;color:var(--green);">580,090</td><td>+3,676%</td></tr>
-        <tr><td>7/15日新增</td><td style="font-weight:600;">58,428</td><td>日流失 658</td></tr>
-        <tr style="border-top:1px solid var(--card-border);"><td>种草通贡献A3</td><td style="font-weight:600;color:var(--green);">258,792</td><td>占A3净增 44.6%</td></tr>
-        <tr><td>种草通 CPA3</td><td style="font-weight:600;color:var(--green);">¥0.47</td><td>= ¥122,324 / 258,792</td></tr>
-        <tr style="border-top:1px solid var(--card-border);"><td>A2→A3 流转率</td><td style="font-weight:600;">5.4%</td><td>59.6万 / 1,110万</td></tr>
-        <tr><td>A3 日均增长</td><td style="font-weight:600;">38,673</td><td>= 580,090 / 15天</td></tr>
-      </table>
-    </div>
-  </div>
+<div class="kr">
+<div class="kc"><div class="kl">5A总资产</div><div class="kv">5,422万</div><div class="kh up">7月 +3,912万（+259%）</div></div>
+<div class="kc"><div class="kl">A3种草人群</div><div class="kv">59.6万</div><div class="kh up">7月净增 58万（+3,676%）</div></div>
+<div class="kc"><div class="kl">种草通 CPA3</div><div class="kv">¥0.47</div><div class="kh">A3贡献 258,792</div></div>
+<div class="kc"><div class="kl">A2→A3 流转率</div><div class="kv">5.4%</div><div class="kh">59.6万 / 1,110万</div></div>
+<div class="kc"><div class="kl">A1→A2 流转率</div><div class="kv">26.1%</div><div class="kh">1,110万 / 4,252万</div></div>
 </div>
+<div class="cr c2">
+<div class="cc"><h3>👥 5A人群资产（7/1 → 7/15）</h3><div class="cs">📋 云图快照</div>
+<div class="fg" style="margin-bottom:12px">
+<div class="fc a1"><div class="fi">👁️</div><div class="fv">4,252万</div><div class="fl">A1 了解</div><div class="fs" style="color:var(--g)">7/1: 1,389万 → +2,863万</div></div>
+<div class="fc a2"><div class="fi">❤️</div><div class="fv">1,110万</div><div class="fl">A2 吸引</div><div class="fs" style="color:var(--g)">7/1: 119万 → +991万</div></div>
+<div class="fc a3"><div class="fi">⭐</div><div class="fv" style="color:var(--g)">59.6万</div><div class="fl">A3 种草</div><div class="fs" style="color:var(--g)">7/1: 1.6万 → +58万</div></div>
+<div class="fc nx"><div class="fi">🛒</div><div class="fv" style="color:var(--td)">—</div><div class="fl">A4 购买</div><div class="fs">待罗盘</div></div>
+<div class="fc nx"><div class="fi">🔄</div><div class="fv" style="color:var(--td)">—</div><div class="fl">A5 复购</div><div class="fs">待罗盘</div></div>
+</div>
+<div class="ar"><div class="ai"><span class="aw">→</span> A1→A2 <span class="rt" style="color:var(--g)">26.1%</span></div><div class="ai"><span class="aw">→</span> A2→A3 <span class="rt" style="color:var(--g)">5.4%</span></div><div class="ai" style="color:var(--td)"><span class="aw">→</span> A3→A4 <span class="rt" style="color:var(--td)">—</span></div></div>
+</div>
+<div class="ac"><h4>🌟 A3 种草人群详情</h4>
+<table>
+<tr><td>7/1 A3基数</td><td style="font-weight:600">15,784</td></tr>
+<tr><td>7/15 A3总量</td><td style="font-weight:600;color:var(--g)">595,874</td></tr>
+<tr><td>7月净增</td><td style="font-weight:600;color:var(--g)">580,090</td><td>+3,676%</td></tr>
+<tr><td>7/15日新增</td><td style="font-weight:600">58,428</td><td>日流失 658</td></tr>
+<tr style="border-top:1px solid var(--cbd)"><td>种草通贡献A3</td><td style="font-weight:600;color:var(--g)">258,792</td><td>占净增 44.6%</td></tr>
+<tr><td>种草通 CPA3</td><td style="font-weight:600;color:var(--g)">¥0.47</td></tr>
+<tr style="border-top:1px solid var(--cbd)"><td>A3日均增长</td><td style="font-weight:600">38,673</td><td>=580,090/15天</td></tr>
+</table></div></div></div>
 
-</div><!-- /main-content -->
+</div><!-- /main -->
 
-<div class="footer-bar">
-  <span>📊 数据截止: 2026-07-17</span>
-  <span>|</span>
-  <span>📸 星图累计快照(07-17) · 种草通/声量宝按日(07-01~07-16) · 星智投累计 · 云图A3快照(07-15)</span>
-  <span>|</span>
-  <span>— 表示该数据源尚未接入或不可用</span>
-  <span style="margin-left:auto;">千川/罗盘/云图A1A2A4A5 待接入</span>
+<div class="fb">
+<span>📊 数据截止 2026-07-17</span><span>|</span>
+<span>星图(07-17快照) · 种草通/声量宝(07-01~07-16) · 星智投(累计) · 云图5A(07-01→07-15)</span>
+<span>|</span><span>— 数据源未接入</span>
+<span style="margin-left:auto">千川/罗盘/A4A5 待接入</span>
 </div>
 
 <script>
-// ── ACCESS CONTROL ──
-const USERS = {
-  "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9": { role:"admin", label:"管理员", icon:"👑" },
-  "1e953525cd8c3c54d84e485d2a46200691c4a1731ca0f4bdd288101ef19e0f9e": { role:"operator", label:"操作人", icon:"🔧" },
-  "b86b7df459e6a83b9f6ca6fed8c4e0d9c171b5e7370956b5d8ed8d9c3a197d9a": { role:"viewer", label:"查看人", icon:"👁️" }
-};
+// ── LOGIN ──
+var USERS={"240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9":{r:"admin",l:"管理员",i:"👑"},"1e953525cd8c3c54d84e485d2a46200691c4a1731ca0f4bdd288101ef19e0f9e":{r:"operator",l:"操作人",i:"🔧"},"b86b7df459e6a83b9f6ca6fed8c4e0d9c171b5e7370956b5d8ed8d9c3a197d9a":{r:"viewer",l:"查看人",i:"👁️"}};
+function doLogin(){var p=document.getElementById('lp').value.trim(),e=document.getElementById('le');if(!p){e.textContent='请输入密码';return}var h=CryptoJS.SHA256(p).toString(),u=USERS[h];if(u){sessionStorage.setItem('dr',u.r);sessionStorage.setItem('dl',u.l);sessionStorage.setItem('di',u.i);sessionStorage.setItem('da','1');document.getElementById('lo').classList.add('hidden');applyRole(u.r,u.l,u.i)}else{e.textContent='密码错误'}}
+function logout(){sessionStorage.clear();document.getElementById('lo').classList.remove('hidden');document.body.className='';var b=document.getElementById('ub');b.className='ub';b.textContent=''}
+function applyRole(r,l,i){document.body.className='role-'+r;var b=document.getElementById('ub');b.className='ub '+(r=='admin'?'ad':r=='operator'?'op':'vw');b.innerHTML=i+' '+l+' <span style="font-size:10px">退出</span>';if(r=='viewer'){var u=document.querySelector('.ubtn');if(u)u.style.display='none'}}
+(function(){if(sessionStorage.getItem('da')=='1'){document.getElementById('lo').classList.add('hidden');applyRole(sessionStorage.getItem('dr'),sessionStorage.getItem('dl'),sessionStorage.getItem('di'))}})();
 
-function doLogin() {
-  var p = document.getElementById('loginPassword').value.trim();
-  var e = document.getElementById('loginError');
-  if (!p) { e.textContent = '请输入密码'; return; }
-  var h = CryptoJS.SHA256(p).toString();
-  var u = USERS[h];
-  if (u) {
-    sessionStorage.setItem('dr', u.role); sessionStorage.setItem('dl', u.label);
-    sessionStorage.setItem('di', u.icon); sessionStorage.setItem('da', '1');
-    document.getElementById('loginOverlay').classList.add('hidden');
-    applyRole(u.role, u.label, u.icon);
-  } else { e.textContent = '密码错误'; }
-}
+// ── NAV ──
+document.querySelectorAll('.nt').forEach(function(t){t.addEventListener('click',function(){document.querySelectorAll('.nt').forEach(function(x){x.classList.remove('active')});t.classList.add('active');document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});var pg=document.getElementById('page-'+t.dataset.p);if(pg){pg.classList.add('active');refreshCurrentPage()}})});
 
-function logout() {
-  sessionStorage.clear();
-  document.getElementById('loginOverlay').classList.remove('hidden');
-  document.body.className = '';
-  document.getElementById('userBadge').className = 'user-badge';
-  document.getElementById('userBadge').textContent = '';
-}
-
-function applyRole(role, label, icon) {
-  document.body.className = 'role-' + role;
-  var b = document.getElementById('userBadge');
-  b.className = 'user-badge ' + role;
-  b.innerHTML = icon + ' ' + label + ' <span style="font-size:10px;opacity:.6;">退出</span>';
-  // Viewer: hide upload
-  if (role === 'viewer') {
-    document.querySelector('.upload-btn').style.display = 'none';
-  }
-}
-
-(function() {
-  if (sessionStorage.getItem('da') === '1') {
-    document.getElementById('loginOverlay').classList.add('hidden');
-    applyRole(sessionStorage.getItem('dr'), sessionStorage.getItem('dl'), sessionStorage.getItem('di'));
-  }
-})();
-
-// ── NAVIGATION ──
-document.querySelectorAll('.nav-tab').forEach(function(t) {
-  t.addEventListener('click', function() {
-    document.querySelectorAll('.nav-tab').forEach(function(x) { x.classList.remove('active'); });
-    t.classList.add('active');
-    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
-    var pg = document.getElementById('page-' + t.dataset.page);
-    if (pg) pg.classList.add('active');
+// ── SORT / FILTER ──
+var sortState={};
+function sortTable(tid,col){
+  var t=document.getElementById(tid),tb=t.querySelector('tbody'),rows=Array.from(tb.querySelectorAll('tr'));
+  var key='sort_'+tid+'_'+col; sortState[key]=sortState[key]==='asc'?'desc':'asc';
+  var dir=sortState[key];
+  t.querySelectorAll('th').forEach(function(th,i){th.classList.remove('asc','desc');if(i===col)th.classList.add(dir)});
+  rows.sort(function(a,b){
+    var ca=(a.cells[col].textContent||'').replace(/[¥,万%]/g,'').trim();
+    var cb=(b.cells[col].textContent||'').replace(/[¥,万%]/g,'').trim();
+    var na=parseFloat(ca),nb=parseFloat(cb);
+    if(!isNaN(na)&&!isNaN(nb)) return dir==='asc'?na-nb:nb-na;
+    return dir==='asc'?ca.localeCompare(cb):cb.localeCompare(ca);
   });
-});
-</script>
+  rows.forEach(function(r){tb.appendChild(r)});
+  updateTableInfo(tid);
+}
+function filterTable(tid,query){
+  var t=document.getElementById(tid),rows=t.querySelectorAll('tbody tr'),sel=t.parentElement.parentElement.querySelector('select');
+  var tierFilter=sel?sel.value:'';
+  var visible=0;
+  rows.forEach(function(r){
+    var txt=r.textContent.toLowerCase(),q=query.toLowerCase();
+    var matchTxt=txt.includes(q);
+    var matchTier=!tierFilter||txt.includes(tierFilter);
+    if(matchTxt&&matchTier){r.classList.remove('hidden');visible++}else{r.classList.add('hidden')}
+  });
+  updateTableInfo(tid,visible);
+  updateKPIs();
+}
+function resetFilter(tid){
+  var t=document.getElementById(tid),inp=t.parentElement.parentElement.querySelector('input');
+  var sel=t.parentElement.parentElement.querySelector('select');
+  if(inp)inp.value='';if(sel)sel.value='';
+  t.querySelectorAll('tbody tr').forEach(function(r){r.classList.remove('hidden')});
+  updateTableInfo(tid);updateKPIs();
+}
+function updateTableInfo(tid,visibleOverride){
+  var t=document.getElementById(tid),info=document.getElementById(tid+'-info');
+  if(!info)return;
+  var total=t.querySelectorAll('tbody tr').length;
+  var visible=visibleOverride!==undefined?visibleOverride:t.querySelectorAll('tbody tr:not(.hidden)').length;
+  info.textContent='显示 '+visible+'/'+total+' 条';
+}
 
+// ── RENDER TABLES ──
+function fmt(n){if(n===null||n===undefined)return'—';if(n>=1e8)return(n/1e8).toFixed(1)+'亿';if(n>=1e4)return(n/1e4).toFixed(1)+'万';return n.toLocaleString()}
+function fmtPct(n){if(n===null||n===undefined)return'—';return(n*100).toFixed(2)+'%'}
+function fmtMoney(n){if(n===null||n===undefined)return'—';if(n>=1e4)return'¥'+(n/1e4).toFixed(1)+'万';return'¥'+n.toLocaleString()}
+function fmtCPE(fee,eng){if(!eng||eng===0)return'—';return'¥'+(fee/eng).toFixed(2)}
+function tierTag(t){if(t==='头部')return'<span class="tag tp">头部</span>';if(t==='腰部')return'<span class="tag tb">腰部</span>';return'<span class="tag to">尾部</span>'}
+
+function renderCreatorTable(){
+  var tb=document.getElementById('tbl-creator').querySelector('tbody');
+  tb.innerHTML='';
+  STORE.creators.forEach(function(c){
+    var eng=c.l+c.c+c.s,rate=eng/c.p, cpe=c.f/eng;
+    // Exclude 我要上热门 which has abnormal CPE of 4.41
+    tb.innerHTML+='<tr data-tier="'+c.t+'" data-mcn="'+c.m+'">'+
+      '<td>'+c.n+'</td><td>'+tierTag(c.t)+'</td><td>'+c.m+'</td>'+
+      '<td>'+fmt(c.p)+'</td><td style="color:'+(rate>0.04?'var(--g)':'')+'">'+(rate*100).toFixed(2)+'%</td>'+
+      '<td>'+fmtCPE(c.f,eng)+'</td><td>'+fmtMoney(c.f)+'</td>'+
+      '<td>'+(c.sr>0?fmt(c.sr):'<span class="na">—</span>')+'</td></tr>';
+  });
+  updateTableInfo('tbl-creator');updateKPIs();
+}
+function renderContentTable(){
+  var tb=document.getElementById('tbl-content').querySelector('tbody');
+  tb.innerHTML='';
+  STORE.creators.forEach(function(c){
+    var eng=c.l+c.c+c.s,rate=eng/c.p;
+    tb.innerHTML+='<tr data-tier="'+c.t+'">'+
+      '<td>'+c.n+'</td><td>'+tierTag(c.t)+'</td>'+
+      '<td>'+fmt(c.p)+'</td><td>'+fmt(c.l)+'</td><td>'+fmt(c.c)+'</td><td>'+fmt(c.s)+'</td>'+
+      '<td style="color:'+(rate>0.04?'var(--g)':'')+'">'+(rate*100).toFixed(2)+'%</td>'+
+      '<td>'+fmtPct(c.cr)+'</td>'+
+      '<td>'+(c.sr>0?fmt(c.sr):'<span class="na">—</span>')+'</td>'+
+      '<td>'+fmtCPE(c.f,eng)+'</td></tr>';
+  });
+  updateTableInfo('tbl-content');updateKPIs();
+}
+
+// ── KPI UPDATES ──
+function updateKPIs(){
+  var rows=document.querySelectorAll('#tbl-creator tbody tr:not(.hidden)');
+  var count=rows.length, tplay=0,tlike=0,tcomment=0,tshare=0,tfee=0,tsearch=0;
+  rows.forEach(function(r){
+    var cells=r.cells;
+    // Match by name
+    var name=cells[0].textContent;
+    var c=STORE.creators.find(function(x){return x.n===name});
+    if(c){tplay+=c.p;tlike+=c.l;tcomment+=c.c;tshare+=c.s;tfee+=c.f;tsearch+=c.sr}
+  });
+  var teng=tlike+tcomment+tshare;
+  var rate=tplay>0?teng/tplay:0;
+  var cpe=teng>0?tfee/teng:0;
+
+  // Creator page
+  setEl('k-cr-count',count); setEl('k-cr-fee',fmtMoney(tfee));
+  setEl('k-cr-avgfee','均费 '+fmtMoney(tfee/count));
+  setEl('k-cr-play',fmt(tplay)); setEl('k-cr-eng',fmt(teng));
+  setEl('k-cr-rate','互动率 '+(rate*100).toFixed(2)+'%');
+  setEl('k-cr-cpe',fmtCPE(tfee,teng)); setEl('k-cr-search','看后搜 '+fmt(tsearch));
+
+  // Content page
+  setEl('k-ct-play',fmt(tplay)); setEl('k-ct-count',count+'条内容');
+  setEl('k-ct-eng',fmt(teng)); setEl('k-ct-rate',(rate*100).toFixed(2)+'%');
+  setEl('k-ct-search',fmt(tsearch)); setEl('k-ct-srate',tplay>0?(tsearch/tplay*100).toFixed(3)+'%':'—');
+  setEl('k-ct-cpe',fmtCPE(tfee,teng));
+
+  // CEO page
+  setEl('k-ceo-cost',fmtMoney(tfee+122324+60302+12981));
+  setEl('k-ceo-creators',count);
+  setEl('k-ceo-play',fmt(tplay));
+  setEl('t-cost-star',fmtMoney(tfee));
+  var totalCost=tfee+122324+60302+12981;
+  var sp=tfee/totalCost*100,stp=122324/totalCost*100,slp=60302/totalCost*100,xzp=12981/totalCost*100;
+  setEl('t-cost-star-pct',sp.toFixed(0)+'%'); setEl('b-cost-star','width:'+sp.toFixed(0)+'%');
+  setEl('t-cost-st-pct',stp.toFixed(0)+'%'); setEl('b-cost-st','width:'+stp.toFixed(0)+'%');
+  setEl('t-cost-sl-pct',slp.toFixed(0)+'%'); setEl('b-cost-sl','width:'+slp.toFixed(0)+'%');
+  setEl('t-cost-xz-pct',xzp.toFixed(0)+'%'); setEl('b-cost-xz','width:'+xzp.toFixed(0)+'%');
+  setEl('t-cpe-star',fmtCPE(tfee,teng));
+  setEl('conv-search-total',fmt(tsearch));
+
+  // Content page KPIs also from content table filter
+  var ctRows=document.querySelectorAll('#tbl-content tbody tr:not(.hidden)');
+  var ctCount=ctRows.length;
+  document.getElementById('k-ct-count').textContent=ctCount+'条内容';
+}
+
+function setEl(id,val){var e=document.getElementById(id);if(e){if(typeof val==='string'&&val.startsWith('width:')){e.setAttribute('style',val)}else{e.textContent=val}}}
+
+function refreshCurrentPage(){
+  renderCreatorTable();renderContentTable();updateKPIs();
+}
+
+// ── INIT ──
+renderCreatorTable();renderContentTable();updateKPIs();
+</script>
 </body>
 </html>
