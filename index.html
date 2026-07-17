@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抖音达人种草营销数据看板</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<style>
+:root {
+  --bg: #0f1117;
+  --card-bg: #1a1d27;
+  --card-border: #2a2d3a;
+  --text: #e1e4ea;
+  --text-dim: #8b8fa3;
+  --accent: #4f8ff7;
+  --accent-green: #34c759;
+  --accent-orange: #ff9f0a;
+  --accent-red: #ff453a;
+  --accent-purple: #bf5af2;
+  --tab-active: #2a3045;
+  --radius: 10px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.header { background: var(--card-bg); border-bottom: 1px solid var(--card-border); padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 52px; }
+.header-left { display: flex; align-items: center; gap: 12px; }
+.logo { font-size: 16px; font-weight: 700; color: var(--text); }
+.logo span { color: var(--accent); }
+.global-controls { display: flex; align-items: center; gap: 10px; }
+.control-group { display: flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 8px; padding: 2px; }
+.control-btn { padding: 6px 14px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; font-size: 13px; transition: all .15s; white-space: nowrap; }
+.control-btn.active { background: var(--accent); color: #fff; }
+.control-btn:hover:not(.active) { color: var(--text); background: var(--card-border); }
+.divider { width: 1px; height: 24px; background: var(--card-border); margin: 0 2px; }
+.upload-btn, .metric-btn { padding: 6px 14px; border: 1px solid var(--card-border); background: var(--card-bg); color: var(--text-dim); border-radius: 8px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.upload-btn:hover, .metric-btn:hover { border-color: var(--accent); color: var(--text); }
+.date-filter { display: flex; align-items: center; gap: 6px; }
+.date-input { padding: 6px 10px; border: 1px solid var(--card-border); background: var(--bg); color: var(--text); border-radius: 6px; font-size: 13px; width: 120px; }
+.date-label { font-size: 12px; color: var(--text-dim); }
+.nav { display: flex; border-bottom: 1px solid var(--card-border); padding: 0 20px; background: var(--card-bg); overflow-x: auto; }
+.nav-tab { padding: 12px 20px; border: none; background: transparent; color: var(--text-dim); cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .15s; }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.nav-tab:hover:not(.active) { color: var(--text); }
+.nav-section { display: flex; align-items: center; }
+.nav-section-label { font-size: 11px; color: var(--text-dim); padding: 0 8px; text-transform: uppercase; letter-spacing: 1px; }
+.main-content { padding: 20px; }
+.page { display: none; }
+.page.active { display: block; }
+.kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px; }
+.kpi-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 16px; }
+.kpi-label { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; }
+.kpi-value { font-size: 26px; font-weight: 700; }
+.kpi-change { font-size: 12px; margin-top: 4px; }
+.kpi-change.up { color: var(--accent-green); }
+.kpi-change.down { color: var(--accent-red); }
+.chart-row { display: grid; gap: 14px; margin-bottom: 20px; }
+
+/* 5A Funnel Styles */
+.fiveA-container { display: flex; gap: 0; align-items: stretch; }
+.fiveA-stages { flex: 1; display: flex; flex-direction: column; gap: 0; }
+.fiveA-flow { width: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+.fiveA-stage { position: relative; display: flex; align-items: center; padding: 0; min-height: 52px; }
+.fiveA-bar { height: 48px; border-radius: 8px; display: flex; align-items: center; padding: 0 16px; transition: all .2s; cursor: default; position: relative; }
+.fiveA-bar:hover { filter: brightness(1.15); transform: scaleX(1.01); }
+.fiveA-bar .stage-label { font-size: 13px; font-weight: 600; margin-right: 12px; white-space: nowrap; min-width: 75px; }
+.fiveA-bar .stage-desc { font-size: 11px; opacity: .7; margin-right: 12px; min-width: 48px; }
+.fiveA-bar .stage-count { font-weight: 700; font-size: 15px; margin-right: 8px; }
+.fiveA-bar .stage-unit { font-size: 11px; opacity: .7; }
+.fiveA-bar .stage-change { font-size: 11px; margin-left: auto; padding: 2px 8px; border-radius: 10px; }
+.fiveA-bar .stage-change.up { background: rgba(52,199,89,.15); color: #34c759; }
+.fiveA-bar .stage-change.flat { background: rgba(139,143,163,.1); color: #8b8fa3; }
+
+/* Stage-specific colors */
+.fiveA-stage-a1 .fiveA-bar { background: linear-gradient(90deg, #2d3b6e 0%, #3a4d8f 100%); }
+.fiveA-stage-a2 .fiveA-bar { background: linear-gradient(90deg, #284263 0%, #355985 100%); }
+.fiveA-stage-a3 .fiveA-bar { background: linear-gradient(90deg, #234a3a 0%, #2d6d4f 100%); border: 2px solid rgba(52,199,89,.4); }
+.fiveA-stage-a4 .fiveA-bar { background: linear-gradient(90deg, #5a3a1a 0%, #7a5228 100%); }
+.fiveA-stage-a5 .fiveA-bar { background: linear-gradient(90deg, #5a1a1a 0%, #7a2828 100%); }
+
+/* Bar widths per stage (wider at top, narrower at bottom - reversed funnel) */
+.stage-a1-width { width: 100%; }
+.stage-a2-width { width: 88%; }
+.stage-a3-width { width: 74%; }
+.stage-a4-width { width: 56%; }
+.stage-a5-width { width: 38%; }
+
+/* Flow arrows between stages */
+.flow-arrow-container { height: 36px; display: flex; align-items: center; justify-content: center; position: relative; }
+.flow-arrow-svg { width: 100%; height: 100%; }
+.flow-rate-badge { position: absolute; right: -60px; font-size: 12px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); white-space: nowrap; }
+.flow-rate-badge.highlight { border-color: rgba(52,199,89,.3); color: #34c759; background: rgba(52,199,89,.08); }
+.flow-rate-badge.warn { border-color: rgba(255,159,10,.3); color: #ff9f0a; }
+
+/* 5A Detail Cards */
+.a3-highlight-card { background: linear-gradient(135deg, rgba(52,199,89,.08) 0%, rgba(52,199,89,.02) 100%); border: 1px solid rgba(52,199,89,.2); border-radius: 12px; padding: 20px; }
+.a3-highlight-card h4 { color: #34c759; margin-bottom: 12px; font-size: 14px; }
+
+.fiveA-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.fiveA-cell { text-align: center; padding: 14px 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,.06); }
+.fiveA-cell .cell-icon { font-size: 22px; margin-bottom: 6px; }
+.fiveA-cell .cell-value { font-size: 20px; font-weight: 700; }
+.fiveA-cell .cell-label { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.fiveA-cell .cell-sub { font-size: 10px; margin-top: 4px; }
+.fiveA-cell.a1 { background: rgba(58,77,143,.12); }
+.fiveA-cell.a2 { background: rgba(53,89,133,.12); }
+.fiveA-cell.a3 { background: rgba(52,199,89,.08); border-color: rgba(52,199,89,.25); }
+.fiveA-cell.a4 { background: rgba(255,159,10,.08); }
+.fiveA-cell.a5 { background: rgba(255,69,58,.08); }
+
+.flow-arrow-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; gap: 8px; }
+.flow-arrow-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-dim); }
+.flow-arrow-item .arrow { font-size: 16px; }
+.flow-arrow-item .rate { font-weight: 600; color: var(--text); }
+
+/* Login Overlay */
+.login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.login-overlay.hidden { display: none; }
+.login-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 40px; width: 400px; text-align: center; }
+.login-card .login-logo { font-size: 40px; margin-bottom: 8px; }
+.login-card h2 { font-size: 20px; margin-bottom: 4px; }
+.login-card .login-sub { color: var(--text-dim); font-size: 13px; margin-bottom: 24px; }
+.login-card input { width: 100%; padding: 12px 16px; border: 1px solid var(--card-border); background: var(--bg); color: var(--text); border-radius: 10px; font-size: 14px; margin-bottom: 12px; outline: none; }
+.login-card input:focus { border-color: var(--accent); }
+.login-card .login-btn { width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.login-card .login-btn:hover { opacity: .9; }
+.login-card .login-error { color: var(--accent-red); font-size: 12px; margin-top: 8px; min-height: 18px; }
+.login-card .login-hint { color: var(--text-dim); font-size: 11px; margin-top: 16px; line-height: 1.6; }
+
+/* Role-based UI: hide elements for viewers */
+.role-viewer .upload-btn { display: none !important; }
+.role-viewer .metric-btn { display: none !important; }
+.role-viewer #sourceSelect { pointer-events: none; opacity: .5; }
+.role-operator .metric-btn[onclick*="toggleMetricPanel"] { opacity: .5; pointer-events: none; }
+
+/* User badge in header */
+.user-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+.user-badge.admin { background: rgba(191,90,242,.15); color: #bf5af2; }
+.user-badge.operator { background: rgba(79,143,247,.15); color: #4f8ff7; }
+.user-badge.viewer { background: rgba(139,143,163,.12); color: #8b8fa3; }
+.chart-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.chart-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.chart-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.chart-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 20px; }
+.chart-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.chart-card h3 .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.badge.locked { background: rgba(79,143,247,.15); color: var(--accent); }
+.badge.hideable { background: rgba(255,159,10,.15); color: var(--accent-orange); }
+.badge.hidden { background: rgba(139,143,163,.15); color: var(--text-dim); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 10px 14px; color: var(--text-dim); font-weight: 500; border-bottom: 1px solid var(--card-border); font-size: 12px; white-space: nowrap; }
+td { padding: 10px 14px; border-bottom: 1px solid rgba(42,45,58,.5); }
+tr:hover td { background: rgba(79,143,247,.04); }
+.status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+.status-dot.green { background: var(--accent-green); }
+.status-dot.yellow { background: var(--accent-orange); }
+.status-dot.red { background: var(--accent-red); }
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+.tag-blue { background: rgba(79,143,247,.15); color: var(--accent); }
+.tag-green { background: rgba(52,199,89,.15); color: var(--accent-green); }
+.tag-orange { background: rgba(255,159,10,.15); color: var(--accent-orange); }
+.tag-purple { background: rgba(191,90,242,.15); color: var(--accent-purple); }
+.tag-red { background: rgba(255,69,58,.15); color: var(--accent-red); }
+.bar-cell { display: flex; align-items: center; gap: 8px; }
+.bar-bg { flex: 1; height: 6px; background: var(--card-border); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; }
+.bar-fill.blue { background: var(--accent); }
+.bar-fill.green { background: var(--accent-green); }
+.bar-fill.orange { background: var(--accent-orange); }
+.bar-fill.purple { background: var(--accent-purple); }
+.metric-panel { position: fixed; right: -380px; top: 0; width: 360px; height: 100vh; background: var(--card-bg); border-left: 1px solid var(--card-border); z-index: 1000; transition: right .3s; overflow-y: auto; padding: 20px; }
+.metric-panel.open { right: 0; }
+.metric-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 999; display: none; }
+.metric-overlay.open { display: block; }
+.metric-section { margin-bottom: 20px; }
+.metric-section h4 { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--card-border); }
+.metric-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+.metric-item label { font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.metric-item input[type="checkbox"] { accent-color: var(--accent); }
+.metric-item .lock-icon { color: var(--text-dim); font-size: 12px; }
+.metric-footer { position: sticky; bottom: 0; background: var(--card-bg); padding: 16px 0 0; border-top: 1px solid var(--card-border); display: flex; gap: 8px; }
+.btn { padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--card-border); color: var(--text); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 1001; display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 28px; width: 520px; max-height: 80vh; overflow-y: auto; }
+.modal h3 { font-size: 18px; margin-bottom: 8px; }
+.modal p { color: var(--text-dim); font-size: 13px; margin-bottom: 20px; }
+.upload-zone { border: 2px dashed var(--card-border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; margin-bottom: 16px; transition: border-color .2s; }
+.upload-zone:hover { border-color: var(--accent); }
+.upload-zone .icon { font-size: 40px; margin-bottom: 10px; }
+.source-select { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+.source-opt { padding: 10px; border: 1px solid var(--card-border); border-radius: 8px; text-align: center; cursor: pointer; font-size: 13px; }
+.source-opt.selected { border-color: var(--accent); background: rgba(79,143,247,.1); }
+.upload-history { font-size: 13px; }
+.upload-history th { font-size: 12px; }
+.funnel-bar { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.funnel-label { width: 100px; font-size: 13px; color: var(--text-dim); text-align: right; }
+.funnel-fill { flex: 1; height: 28px; border-radius: 5px; display: flex; align-items: center; padding: 0 12px; font-size: 13px; font-weight: 600; }
+.funnel-val { width: 70px; font-size: 13px; }
+.grid-8 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.mini-stat { background: var(--bg); border-radius: 8px; padding: 12px; text-align: center; }
+.mini-stat .val { font-size: 20px; font-weight: 700; }
+.mini-stat .lbl { font-size: 11px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<!-- Login Overlay -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">📊</div>
+    <h2>抖音达人种草营销数据看板</h2>
+    <div class="login-sub">请输入访问密码</div>
+    <input type="password" id="loginPassword" placeholder="输入密码..." autofocus onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">登 录</button>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-hint">
+      管理员密码 → 全部权限（查看/上传/修改）<br>
+      操作人密码 → 可上传、修改指标 | 查看人密码 → 仅查看
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">📊 抖音达人种草营销<span>数据看板</span></div>
+  </div>
+  <div class="global-controls">
+    <div class="control-group" id="purposeControl">
+      <button class="control-btn" data-purpose="exposure">曝光型</button>
+      <button class="control-btn active" data-purpose="seeding">种草型</button>
+      <button class="control-btn" data-purpose="conversion">转化型</button>
+    </div>
+    <div class="divider"></div>
+    <div class="control-group" id="trafficControl">
+      <button class="control-btn" data-traffic="organic">自然流量</button>
+      <button class="control-btn" data-traffic="paid">付费流量</button>
+      <button class="control-btn active" data-traffic="total">总体</button>
+    </div>
+    <div class="divider"></div>
+    <div class="date-filter">
+      <span class="date-label">📅</span>
+      <input type="date" class="date-input" value="2026-07-01" id="dateStart">
+      <span class="date-label">至</span>
+      <input type="date" class="date-input" value="2026-07-16" id="dateEnd">
+    </div>
+    <div class="divider"></div>
+    <button class="metric-btn" onclick="toggleMetricPanel()">⚙️ 指标设置</button>
+    <button class="upload-btn" onclick="openUploadModal()">📤 数据上传</button>
+    <span class="user-badge" id="userBadge" onclick="logout()" title="点击退出登录"></span>
+  </div>
+</div>
+
+<!-- Metric Panel -->
+<div class="metric-overlay" id="metricOverlay" onclick="toggleMetricPanel()"></div>
+<div class="metric-panel" id="metricPanel">
+  <h3 style="margin-bottom:16px;">指标显隐设置</h3>
+  <p style="color:var(--text-dim);font-size:12px;margin-bottom:16px;">当前页面: <strong id="metricPageName">达人资产</strong></p>
+  <div class="metric-section">
+    <h4>🔒 始终展示</h4>
+    <div class="metric-item"><label><input type="checkbox" checked disabled> <span>核心KPI卡片</span></label><span class="lock-icon">🔒</span></div>
+    <div class="metric-item"><label><input type="checkbox" checked disabled> <span>达人矩阵气泡图</span></label><span class="lock-icon">🔒</span></div>
+    <div class="metric-item"><label><input type="checkbox" checked disabled> <span>达人排行榜</span></label><span class="lock-icon">🔒</span></div>
+    <div class="metric-item"><label><input type="checkbox" checked disabled> <span>目的筛选器</span></label><span class="lock-icon">🔒</span></div>
+  </div>
+  <div class="metric-section">
+    <h4>☑ 默认展示 · 可隐藏</h4>
+    <div class="metric-item"><label><input type="checkbox" checked> <span>达人分级分布</span></label></div>
+    <div class="metric-item"><label><input type="checkbox" checked> <span>达人留存率趋势</span></label></div>
+    <div class="metric-item"><label><input type="checkbox" checked> <span>MCN贡献排行</span></label></div>
+    <div class="metric-item"><label><input type="checkbox" checked> <span>达人费用趋势</span></label></div>
+  </div>
+  <div class="metric-section">
+    <h4>☐ 默认隐藏 · 可勾选</h4>
+    <div class="metric-item"><label><input type="checkbox"> <span>达人粉丝画像对比雷达图</span></label></div>
+    <div class="metric-item"><label><input type="checkbox"> <span>达人历史商单明细表</span></label></div>
+    <div class="metric-item"><label><input type="checkbox"> <span>达人内容风格标签云</span></label></div>
+    <div class="metric-item"><label><input type="checkbox"> <span>达人人均报价趋势</span></label></div>
+  </div>
+  <div class="metric-footer">
+    <button class="btn btn-secondary" onclick="resetMetrics()">恢复默认</button>
+    <button class="btn btn-secondary" style="margin-left:auto;">全部展开</button>
+    <button class="btn btn-primary" onclick="toggleMetricPanel()">确定</button>
+  </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <h3>📤 数据上传中心</h3>
+    <p>选择数据源类型并上传文件，系统将自动识别字段映射</p>
+    <div class="source-select" id="sourceSelect">
+      <div class="source-opt selected" data-source="xingtu">星图<br><small>任务投放数据</small></div>
+      <div class="source-opt" data-source="qianchuan">千川<br><small>投放报表</small></div>
+      <div class="source-opt" data-source="ocean">巨量引擎<br><small>品牌广告</small></div>
+      <div class="source-opt" data-source="luopan">电商罗盘<br><small>成交数据</small></div>
+      <div class="source-opt" data-source="yuntu">巨量云图<br><small>人群数据</small></div>
+      <div class="source-opt" data-source="douplus">DOU+<br><small>加热数据</small></div>
+    </div>
+    <div class="upload-zone" onclick="alert('模拟上传成功！')">
+      <div class="icon">📂</div>
+      <div style="color:var(--text-dim)">拖拽文件到此处，或 <span style="color:var(--accent)">点击选择</span></div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">支持 .xlsx / .xls / .csv · 单文件上限 50MB</div>
+    </div>
+    <div style="margin-bottom:12px;font-size:13px;">
+      <label style="color:var(--text-dim)">📅 数据时间特征:</label>
+      <select style="padding:6px 10px;border:1px solid var(--card-border);background:var(--bg);color:var(--text);border-radius:6px;margin-left:8px;">
+        <option>累计数据(快照)</option>
+        <option>按日数据</option>
+        <option>周期快照</option>
+      </select>
+    </div>
+    <table class="upload-history">
+      <thead><tr><th>文件名</th><th>数据源</th><th>上传时间</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>任务投放数据.xlsx</td><td><span class="tag tag-blue">星图</span></td><td>07-16 14:30</td><td><span class="status-dot green"></span>已处理</td></tr>
+        <tr><td>千川日报_0715.xlsx</td><td><span class="tag tag-green">千川</span></td><td>07-15 10:20</td><td><span class="status-dot green"></span>已处理</td></tr>
+        <tr><td>品牌广告_7月.xlsx</td><td><span class="tag tag-purple">巨量引擎</span></td><td>07-14 09:15</td><td><span class="status-dot yellow"></span>部分冲突</td></tr>
+      </tbody>
+    </table>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closeUploadModal()">取消</button>
+      <button class="btn btn-primary" onclick="closeUploadModal()">开始导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav" id="nav">
+  <button class="nav-tab active" data-page="ceo">CEO驾驶舱</button>
+  <button class="nav-tab" data-page="creator">达人资产</button>
+  <button class="nav-tab" data-page="content">内容表现</button>
+  <span class="nav-section-label">投放分析</span>
+  <button class="nav-tab" data-page="qianchuan">千川投放</button>
+  <button class="nav-tab" data-page="brand">品牌广告</button>
+  <button class="nav-tab" data-page="heating">原生内容加热</button>
+  <span class="nav-section-label">效果验证</span>
+  <button class="nav-tab" data-page="conversion">电商转化</button>
+  <button class="nav-tab" data-page="brandasset">品牌资产</button>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+
+<!-- ===== Page: CEO驾驶舱 ===== -->
+<div class="page active" id="page-ceo">
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">种草GMV</div>
+      <div class="kpi-value">¥1,580万</div>
+      <div class="kpi-change up">↑ 15% vs 上月</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">综合ROI</div>
+      <div class="kpi-value">2.8</div>
+      <div class="kpi-change up">↑ 0.3</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">A3种草人群</div>
+      <div class="kpi-value">285万</div>
+      <div class="kpi-change up">↑ 22%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">合作达人数</div>
+      <div class="kpi-value">320</div>
+      <div class="kpi-change up">↑ 18人</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">CPE(种草)</div>
+      <div class="kpi-value">¥1.85</div>
+      <div class="kpi-change down">↓ 12%</div>
+    </div>
+  </div>
+  <div class="chart-row cols-2">
+    <div class="chart-card">
+      <h3>📊 种草漏斗 <span class="badge locked">🔒</span></h3>
+      <div class="funnel-bar"><span class="funnel-label">达人内容</span><div class="funnel-fill" style="width:100%;background:var(--accent)">320条</div><span class="funnel-val">100%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">播放</span><div class="funnel-fill" style="width:85%;background:#5e9cf7">2,850万</div><span class="funnel-val">—</span></div>
+      <div class="funnel-bar"><span class="funnel-label">互动</span><div class="funnel-fill" style="width:42%;background:var(--accent-purple)">128万</div><span class="funnel-val">4.5%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">搜索</span><div class="funnel-fill" style="width:18%;background:var(--accent-orange)">52万</div><span class="funnel-val">1.8%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">成交</span><div class="funnel-fill" style="width:8%;background:var(--accent-green)">22万单</div><span class="funnel-val">0.8%</span></div>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-dim);text-align:right;">📸 累计快照(截止07-16)</div>
+    </div>
+    <div class="chart-card">
+      <h3>👥 品牌人群资产 <span class="badge locked">🔒</span></h3>
+      <div class="fiveA-grid" style="margin-bottom:12px;">
+        <div class="fiveA-cell a1"><div class="cell-value">520万</div><div class="cell-label">A1 认知</div><div class="cell-sub" style="color:#34c759;">↑ 8%</div></div>
+        <div class="fiveA-cell a2"><div class="cell-value">380万</div><div class="cell-label">A2 兴趣</div><div class="cell-sub" style="color:#34c759;">↑ 15%</div></div>
+        <div class="fiveA-cell a3"><div class="cell-value" style="color:#34c759;">285万</div><div class="cell-label">A3 种草</div><div class="cell-sub" style="color:#34c759;">↑ 22%</div></div>
+        <div class="fiveA-cell a4"><div class="cell-value">72万</div><div class="cell-label">A4 购买</div><div class="cell-sub" style="color:#34c759;">↑ 12%</div></div>
+        <div class="fiveA-cell a5"><div class="cell-value">38万</div><div class="cell-label">A5 复购</div><div class="cell-sub" style="color:#34c759;">↑ 8%</div></div>
+      </div>
+      <div class="flow-arrow-row" style="padding-top:10px;border-top:1px solid var(--card-border);">
+        <div class="flow-arrow-item"><span class="arrow">→</span> A1→A2 <span class="rate">73%</span></div>
+        <div class="flow-arrow-item" style="color:#34c759;"><span class="arrow" style="color:#34c759;">→</span> A2→A3 <span class="rate" style="color:#34c759;">75% ⬆</span></div>
+        <div class="flow-arrow-item"><span class="arrow">→</span> A3→A4 <span class="rate">25%</span></div>
+        <div class="flow-arrow-item" style="color:#ff9f0a;"><span class="arrow" style="color:#ff9f0a;">→</span> A4→A5 <span class="rate" style="color:#ff9f0a;">53%</span></div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:12px;font-size:12px;">
+        <div><span style="color:var(--text-dim);">CPA3</span> <span style="font-weight:600;">¥2.33</span> <span style="color:#34c759;font-size:11px;">↓10%</span></div>
+        <div><span style="color:var(--text-dim);">搜索指数</span> <span style="font-weight:600;">185</span> <span style="color:#34c759;font-size:11px;">↑18%</span></div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text-dim);text-align:right;">📋 快照周 W28</div>
+    </div>
+  </div>
+  <div class="chart-row cols-3">
+    <div class="chart-card">
+      <h3>💰 预算分配 <span class="badge hideable">☑</span></h3>
+      <table><thead><tr><th>目的</th><th>预算</th><th>占比</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-blue">曝光型</span></td><td>¥48万</td><td><div class="bar-cell"><span>30%</span><div class="bar-bg"><div class="bar-fill blue" style="width:30%"></div></div></div></td></tr>
+        <tr><td><span class="tag tag-green">种草型</span></td><td>¥80万</td><td><div class="bar-cell"><span>50%</span><div class="bar-bg"><div class="bar-fill green" style="width:50%"></div></div></div></td></tr>
+        <tr><td><span class="tag tag-orange">转化型</span></td><td>¥32万</td><td><div class="bar-cell"><span>20%</span><div class="bar-bg"><div class="bar-fill orange" style="width:20%"></div></div></div></td></tr>
+      </tbody></table>
+    </div>
+    <div class="chart-card">
+      <h3>🏆 竞品声量对比 <span class="badge hideable">☑</span></h3>
+      <table><thead><tr><th>品牌</th><th>SOV</th><th>互动率</th></tr></thead>
+      <tbody>
+        <tr><td><strong>优C满益</strong></td><td>28.5%</td><td>4.5%</td></tr>
+        <tr><td>竞品A</td><td>22.1%</td><td>3.8%</td></tr>
+        <tr><td>竞品B</td><td>18.3%</td><td>4.1%</td></tr>
+      </tbody></table>
+    </div>
+    <div class="chart-card">
+      <h3>⚠️ 异常告警 <span class="badge hideable">☑</span></h3>
+      <div style="font-size:13px;">
+        <div style="padding:8px;background:rgba(255,69,58,.08);border-radius:6px;margin-bottom:8px;">
+          <span class="status-dot red"></span> <strong>爆米花妈妈</strong> CPE上涨35%，建议检查投放人群定向
+        </div>
+        <div style="padding:8px;background:rgba(255,159,10,.08);border-radius:6px;">
+          <span class="status-dot yellow"></span> <strong>SP005素材</strong> 已进入衰减期，ROI较峰值下降22%
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Page: 达人资产 ===== -->
+<div class="page" id="page-creator">
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-label">合作达人数</div><div class="kpi-value">320</div><div class="kpi-change up">↑ 18人</div></div>
+    <div class="kpi-card"><div class="kpi-label">CPE(种草)</div><div class="kpi-value">¥1.85</div><div class="kpi-change down">↓ 8%</div></div>
+    <div class="kpi-card"><div class="kpi-label">新增A3</div><div class="kpi-value">28万</div><div class="kpi-change up">↑ 22%</div></div>
+    <div class="kpi-card"><div class="kpi-label">达人留存率</div><div class="kpi-value">92%</div><div class="kpi-change up">↑ 3pp</div></div>
+    <div class="kpi-card"><div class="kpi-label">头部达人占比</div><div class="kpi-value">18%</div><div class="kpi-change">持平</div></div>
+  </div>
+  <div class="chart-row cols-2">
+    <div class="chart-card">
+      <h3>🏅 达人排行榜 (种草型) <span class="badge locked">🔒</span></h3>
+      <table>
+        <thead><tr><th>排名</th><th>达人</th><th>层级</th><th>互动率</th><th>CPE</th><th>新增A3</th><th>综合评分</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>@毛晓彤</td><td><span class="tag tag-purple">头部</span></td><td>3.66%</td><td>¥0.88</td><td>8.5万</td><td>55</td></tr>
+          <tr><td>2</td><td>@老爸测评</td><td><span class="tag tag-blue">肩部</span></td><td>5.50%</td><td>¥1.20</td><td>6.2万</td><td>67</td></tr>
+          <tr><td>3</td><td>@芒果妈妈</td><td><span class="tag tag-green">腰部</span></td><td>1.99%</td><td>¥1.71</td><td>3.8万</td><td>63</td></tr>
+          <tr><td>4</td><td>@爆米花妈妈</td><td><span class="tag tag-green">腰部</span></td><td>5.83%</td><td>¥0.51</td><td>5.5万</td><td>67</td></tr>
+          <tr><td>5</td><td>@野生小娱妹</td><td><span class="tag tag-orange">尾部</span></td><td>1.18%</td><td>¥0.90</td><td>1.2万</td><td>60</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chart-card">
+      <h3>📊 达人分级分布 <span class="badge hideable">☑</span></h3>
+      <table><thead><tr><th>层级</th><th>人数</th><th>占比</th><th>平均CPE</th><th>平均A3增量</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-purple">头部 S</span></td><td>12</td><td>4%</td><td>¥0.88</td><td>8.5万</td></tr>
+        <tr><td><span class="tag tag-blue">肩部 A</span></td><td>48</td><td>15%</td><td>¥1.25</td><td>4.2万</td></tr>
+        <tr><td><span class="tag tag-green">腰部 B</span></td><td>160</td><td>50%</td><td>¥1.85</td><td>1.8万</td></tr>
+        <tr><td><span class="tag tag-orange">尾部 C</span></td><td>100</td><td>31%</td><td>¥2.50</td><td>0.5万</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+  <div class="chart-row cols-2">
+    <div class="chart-card" id="creatorMcnCard">
+      <h3>🏢 MCN贡献排行 <span class="badge hideable">☑</span></h3>
+      <table><thead><tr><th>MCN</th><th>合作达人数</th><th>总消耗</th><th>总A3增量</th><th>平均CPE</th></tr></thead>
+      <tbody>
+        <tr><td>芒果妈妈</td><td>3</td><td>¥75,600</td><td>12.5万</td><td>¥1.38</td></tr>
+        <tr><td>新偶文化</td><td>5</td><td>¥56,700</td><td>9.8万</td><td>¥1.05</td></tr>
+        <tr><td>江西抓马</td><td>1</td><td>¥29,400</td><td>5.2万</td><td>¥1.58</td></tr>
+        <tr><td>深圳思空传播</td><td>1</td><td>¥14,490</td><td>2.1万</td><td>¥1.77</td></tr>
+      </tbody></table>
+    </div>
+    <div class="chart-card" id="creatorFeeCard">
+      <h3>💰 达人费用趋势 <span class="badge hideable">☑</span></h3>
+      <table><thead><tr><th>达人</th><th>固费</th><th>预估佣金</th><th>总成本</th><th>自然CPV</th></tr></thead>
+      <tbody>
+        <tr><td>毛晓彤</td><td>¥367,500</td><td>—</td><td>¥367,500</td><td>—</td></tr>
+        <tr><td>爆米花妈妈</td><td>¥12,600</td><td>¥2,520</td><td>¥15,120</td><td>—</td></tr>
+        <tr><td>追娱大明星</td><td>¥21,000</td><td>—</td><td>¥21,000</td><td>—</td></tr>
+      </tbody></table>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:8px;">⚠️ 自然播放量数据未回传，自然CPV暂不可用</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Page: 内容表现 ===== -->
+<div class="page" id="page-content">
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-label">总播放量</div><div class="kpi-value">2,850万</div><div class="kpi-change up">↑ 18%</div></div>
+    <div class="kpi-card"><div class="kpi-label">互动率(种草)</div><div class="kpi-value">4.5%</div><div class="kpi-change up">↑ 0.8pp</div></div>
+    <div class="kpi-card"><div class="kpi-label">搜索引导率</div><div class="kpi-value">1.8%</div><div class="kpi-change up">↑ 0.3pp</div></div>
+    <div class="kpi-card"><div class="kpi-label">GPM</div><div class="kpi-value">¥580</div><div class="kpi-change up">↑ 8%</div></div>
+    <div class="kpi-card"><div class="kpi-label">爆款率</div><div class="kpi-value">12%</div><div class="kpi-change down">↓ 2pp</div></div>
+  </div>
+  <div class="chart-row cols-2">
+    <div class="chart-card">
+      <h3>📈 内容排行榜 (种草型 · 自然流量) <span class="badge locked">🔒</span></h3>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">📸 累计快照(截止07-16) | 排序: 互动率 ↓</div>
+      <table><thead><tr><th>达人</th><th>内容标题</th><th>播放量</th><th>互动率</th><th>收藏率</th><th>搜索引导</th><th>加热健康度</th></tr></thead>
+      <tbody>
+        <tr><td>爆米花妈妈</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">让你见识冻龄女神的权威...</td><td>63.9万</td><td>5.83%</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>芒果妈妈</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">仙女都在喝的快乐养生水...</td><td>125.8万</td><td>1.99%</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>毛晓彤</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">这个夏天是青提柠檬味的🍋...</td><td>1135万</td><td>3.66%</td><td>—</td><td>5,405</td><td>—</td></tr>
+        <tr><td>娱乐星鲜社</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">胡连馨有你这样的实力...</td><td>61.6万</td><td>2.41%</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>野生小娱妹</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">万人血书！内娱00后小花...</td><td>52.5万</td><td>1.18%</td><td>—</td><td>2,487</td><td>—</td></tr>
+      </tbody></table>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:8px;">⚠️ 自然播放量未回传，当前展示总量。加热健康度需自然/付费拆分数据。</div>
+    </div>
+    <div class="chart-card">
+      <h3>📂 内容类型分布 <span class="badge hideable">☑</span></h3>
+      <table><thead><tr><th>类型</th><th>数量</th><th>平均互动率</th><th>占比</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-blue">明星种草</span></td><td>5</td><td>3.2%</td><td><div class="bar-cell"><span>42%</span><div class="bar-bg"><div class="bar-fill blue" style="width:42%"></div></div></div></td></tr>
+        <tr><td><span class="tag tag-green">娱乐资讯</span></td><td>4</td><td>2.1%</td><td><div class="bar-cell"><span>33%</span><div class="bar-bg"><div class="bar-fill green" style="width:33%"></div></div></div></td></tr>
+        <tr><td><span class="tag tag-orange">搞笑剧情</span></td><td>2</td><td>5.8%</td><td><div class="bar-cell"><span>17%</span><div class="bar-bg"><div class="bar-fill orange" style="width:17%"></div></div></div></td></tr>
+        <tr><td><span class="tag tag-purple">颜值/时尚</span></td><td>1</td><td>2.4%</td><td><div class="bar-cell"><span>8%</span><div class="bar-bg"><div class="bar-fill purple" style="width:8%"></div></div></div></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Page: 千川投放 ===== -->
+<div class="page" id="page-qianchuan">
+  <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <button class="control-btn active" style="background:var(--accent);color:#fff;">全部</button>
+    <button class="control-btn">短视频引流</button>
+    <button class="control-btn">直播引流</button>
+    <button class="control-btn">商品卡</button>
+    <button class="control-btn">全域推广 🅤</button>
+    <button class="control-btn">乘方</button>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-label">总消耗</div><div class="kpi-value">¥580万</div><div class="kpi-change up">↑ 12%</div></div>
+    <div class="kpi-card"><div class="kpi-label">投放ROI</div><div class="kpi-value">2.1</div><div class="kpi-change up">↑ 0.3</div></div>
+    <div class="kpi-card"><div class="kpi-label">千川GMV</div><div class="kpi-value">¥1,218万</div><div class="kpi-change up">↑ 15%</div></div>
+    <div class="kpi-card"><div class="kpi-label">GPM</div><div class="kpi-value">¥620</div><div class="kpi-change up">↑ 8%</div></div>
+    <div class="kpi-card"><div class="kpi-label">CPA</div><div class="kpi-value">¥28.5</div><div class="kpi-change down">↓ 5%</div></div>
+  </div>
+  <div class="chart-card" style="margin-bottom:14px;">
+    <h3>📊 产品维度拆解 <span class="badge locked">🔒</span></h3>
+    <table><thead><tr><th>产品</th><th>消耗</th><th>ROI</th><th>GMV</th><th>GPM</th><th>CPA</th><th>CPM</th><th>自然/付费</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag-blue">短视频引流</span></td><td>¥280万</td><td>1.8</td><td>¥504万</td><td>¥520</td><td>¥32</td><td>¥18.5</td><td><span class="status-dot green"></span>可拆分</td></tr>
+      <tr><td><span class="tag tag-purple">直播引流</span></td><td>¥180万</td><td>2.5</td><td>¥450万</td><td>¥680</td><td>¥25</td><td>¥22.3</td><td><span class="status-dot green"></span>可拆分</td></tr>
+      <tr><td><span class="tag tag-green">商品卡</span></td><td>¥60万</td><td>3.2</td><td>¥192万</td><td>¥850</td><td>¥18</td><td>¥15.2</td><td>—</td></tr>
+      <tr style="background:rgba(255,159,10,.04);"><td><span class="tag tag-orange">全域推广 🅤</span></td><td>¥60万</td><td>2.1</td><td>¥126万</td><td>¥610</td><td>¥30</td><td>¥19.8</td><td><span class="status-dot red"></span>不可拆分</td></tr>
+    </tbody></table>
+  </div>
+  <div class="chart-row cols-2">
+    <div class="chart-card">
+      <h3>🎬 素材排行榜 (短视频引流) <span class="badge locked">🔒</span></h3>
+      <table><thead><tr><th>素材ID</th><th>达人</th><th>消耗</th><th>ROI</th><th>GPM</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>SP001</td><td>@毛晓彤</td><td>¥85K</td><td style="color:var(--accent-green)">3.2</td><td>¥720</td><td><span class="status-dot green"></span>加热中</td></tr>
+        <tr><td>SP003</td><td>@老爸测评</td><td>¥62K</td><td style="color:var(--accent-green)">2.8</td><td>¥650</td><td><span class="status-dot green"></span>加热中</td></tr>
+        <tr><td>SP005</td><td>@爆米花妈妈</td><td>¥48K</td><td style="color:var(--accent-orange)">2.1</td><td>¥580</td><td><span class="status-dot yellow"></span>观察中</td></tr>
+        <tr><td style="color:var(--accent-red)">SP012</td><td>@追娱大明星</td><td>¥35K</td><td style="color:var(--accent-red)">0.8</td><td>¥320</td><td><span class="status-dot red"></span>已暂停</td></tr>
+      </tbody></table>
+    </div>
+    <div class="chart-card">
+      <h3>⚠️ 素材衰减预警 <span class="badge hideable">☑</span></h3>
+      <table><thead><tr><th>素材</th><th>峰值ROI</th><th>当前ROI</th><th>衰减%</th><th>建议</th></tr></thead>
+      <tbody>
+        <tr style="background:rgba(255,69,58,.05);"><td>SP012</td><td>2.5</td><td>0.8</td><td style="color:var(--accent-red)">-68%</td><td><span class="tag tag-red">暂停投放</span></td></tr>
+        <tr style="background:rgba(255,159,10,.05);"><td>SP008</td><td>3.1</td><td>2.3</td><td style="color:var(--accent-orange)">-26%</td><td><span class="tag tag-orange">降预算</span></td></tr>
+        <tr><td>SP005</td><td>2.8</td><td>2.1</td><td style="color:var(--accent-orange)">-25%</td><td>观察</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Page: 品牌广告 ===== -->
+<div class="page" id="page-brand">
+  <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <button class="control-btn active" style="background:var(--accent);color:#fff;">全部</button>
+    <button class="control-btn">品牌专区</button>
+    <button class="control-btn">种草通合约</button>
+    <button class="control-btn">种草通竞价</button>
+    <button class="control-btn">FeedsLive</button>
+    <button class="control-btn">AD竞价信息流</button>
+    <button class="control-btn">TopView</button>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-label">品牌广告总消耗</div><div class="kpi-value">¥158万</div><div class="kpi-change up">↑ 8%</div></div>
+    <div class="kpi-card"><div class="kpi-label">种草通CPE</div><div class="kpi-value">¥2.97</div><div class="kpi-change down">↓ 5%</div></div>
+    <div class="kpi-card"><div class="kpi-label">CPA3</div><div class="kpi-value">¥1.96</div><div class="kpi-change down">↓ 10%</div></div>
+    <div class="kpi-card"><div class="kpi-label">品牌搜索增量</div><div class="kpi-value">+18%</div><div class="kpi-change up">↑ 5pp</div></div>
+    <div class="kpi-card"><div class="kpi-label">竞品词拦截</div><div class="kpi-value">28万次</div><div class="kpi-change up">↑ 12%</div></div>
+  </div>
+  <div class="chart-row cols-2">
+    <div class="chart-card">
+      <h3>📊 各产品消耗分布 <span class="badge locked">🔒</span></h3>
+      <table><thead><tr><th>产品</th><th>消耗</th><th>占比</th><th>CPE</th><th>CPA3</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-purple">种草通合约</span></td><td>¥55万</td><td><div class="bar-cell"><span>35%</span><div class="bar-bg"><div class="bar-fill purple" style="width:35%"></div></div></div></td><td>¥2.97</td><td>¥1.96</td></tr>
+        <tr><td><span class="tag tag-blue">种草通竞价</span></td><td>¥42万</td><td><div class="bar-cell"><span>27%</span><div class="bar-bg"><div class="bar-fill blue" style="width:27%"></div></div></div></td><td>¥3.28</td><td>¥2.33</td></tr>
+        <tr><td><span class="tag tag-orange">品牌专区</span></td><td>¥28万</td><td><div class="bar-cell"><span>18%</span><div class="bar-bg"><div class="bar-fill orange" style="width:18%"></div></div></div></td><td>—</td><td>¥2.33</td></tr>
+        <tr><td><span class="tag tag-green">FeedsLive</span></td><td>¥18万</td><td><div class="bar-cell"><span>12%</span><div class="bar-bg"><div class="bar-fill green" style="width:12%"></div></div></div></td><td>—</td><td>—</td></tr>
+        <tr><td>AD竞价信息流</td><td>¥10万</td><td><div class="bar-cell"><span>6%</span><div class="bar-bg"><div class="bar-fill" style="width:6%;background:var(--text-dim)"></div></div></div></td><td>¥1.92</td><td>¥1.67</td></tr>
+        <tr><td>TopView</td><td>¥5万</td><td><div class="bar-cell"><span>3%</span><div class="bar-bg"><div class="bar-fill" style="width:3%;background:var(--text-dim)"></div></div></div></td><td>—</td><td>—</td></tr>
+      </tbody></table>
+    </div>
+    <div class="chart-card">
+      <h3>🔍 品牌专区搜索漏斗 <span class="badge hideable">☑</span></h3>
+      <div class="funnel-bar"><span class="funnel-label">搜索品牌词</span><div class="funnel-fill" style="width:100%;background:var(--accent)">52万</div><span class="funnel-val">100%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">专区展现</span><div class="funnel-fill" style="width:85%;background:#5e9cf7">44万</div><span class="funnel-val">85%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">专区点击</span><div class="funnel-fill" style="width:11%;background:var(--accent-purple)">5.5万</div><span class="funnel-val">12.5%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">进店/直播间</span><div class="funnel-fill" style="width:4%;background:var(--accent-green)">2.1万</div><span class="funnel-val">3.8%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Page: 原生内容加热 ===== -->
+<div class="page" id="page-heating">
+  <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <button class="control-btn active" style="background:var(--accent);color:#fff;">全部</button>
+    <button class="control-btn">DOU+</button>
+    <button class="control-btn">声量宝</button>
+    <button class="control-btn">星智投</button>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-label">加热总消耗</div><div class="kpi-value">¥82.8万</div><div class="kpi-change up">↑ 15%</div></div>
+    <div class="kpi-card"><div class="kpi-label">声量宝搜索成本</div><div class="kpi-value">¥1.20</div><div class="kpi-change down">↓ 8%</div></div>
+    <div class="kpi-card"><div class="kpi-label">星智投CPE</div><div class="kpi-value">¥3.50</div><div class="kpi-change down">↓ 5%</div></div>
+    <div class="kpi-card"><div class="kpi-label">DOU+ CPM</div><div class="kpi-value">¥8.2</div><div class="kpi-change">持平</div></div>
+    <div class="kpi-card"><div class="kpi-label">非粉触达占比</div><div class="kpi-value">72%</div><div class="kpi-change up">↑ 3pp</div></div>
+  </div>
+  <div class="chart-row cols-2">
+    <div class="chart-card">
+      <h3>📊 三产品消耗 & 效率对比 <span class="badge locked">🔒</span></h3>
+      <table><thead><tr><th>产品</th><th>消耗</th><th>CPE</th><th>搜索成本</th><th>涨粉成本</th><th>CPA3</th><th>数据来源</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-blue">声量宝</span></td><td>¥35万</td><td>—</td><td>¥1.20</td><td>—</td><td>¥2.33</td><td>📊 按日</td></tr>
+        <tr><td><span class="tag tag-purple">星智投</span></td><td>¥42万</td><td>¥3.50</td><td>—</td><td>¥5.20</td><td>¥2.80</td><td>📸 累计</td></tr>
+        <tr><td><span class="tag tag-orange">DOU+</span></td><td>¥5.8万</td><td>¥1.35</td><td>—</td><td>¥3.50</td><td>—</td><td>✋ 手工</td></tr>
+      </tbody></table>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:8px;">📊按日聚合(07-01~07-16) | 📸累计快照(截止07-16) | ✋手工填报</div>
+    </div>
+    <div class="chart-card">
+      <h3>🔍 声量宝搜索漏斗 <span class="badge hideable">☑</span></h3>
+      <div class="funnel-bar"><span class="funnel-label">触达UV</span><div class="funnel-fill" style="width:100%;background:var(--accent)">280万</div><span class="funnel-val">100%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">搜索品牌词</span><div class="funnel-fill" style="width:7%;background:var(--accent-purple)">18.5万</div><span class="funnel-val">6.6%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">进品牌专区</span><div class="funnel-fill" style="width:3%;background:var(--accent-orange)">8.2万</div><span class="funnel-val">44%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">进店/直播间</span><div class="funnel-fill" style="width:0.8%;background:var(--accent-green)">2.1万</div><span class="funnel-val">26%</span></div>
+    </div>
+  </div>
+  <div class="chart-card">
+    <h3>⚠️ DOU+加热内容 <span class="badge hideable">☑</span> <span class="tag tag-red" style="font-size:11px;">手工填报</span></h3>
+    <table><thead><tr><th>达人</th><th>消耗</th><th>播放增量(估)</th><th>互动成本</th><th>数据来源</th></tr></thead>
+    <tbody>
+      <tr><td>@张同学</td><td>¥8,000</td><td>95万</td><td>¥1.12</td><td>✋ DOU+后台</td></tr>
+      <tr><td>@李佳琦</td><td>¥5,000</td><td>52万</td><td>¥1.28</td><td>✋ DOU+后台</td></tr>
+    </tbody></table>
+  </div>
+</div>
+
+<!-- ===== Page: 电商转化 ===== -->
+<div class="page" id="page-conversion">
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-label">全渠道GMV</div><div class="kpi-value">¥1,580万</div><div class="kpi-change up">↑ 15%</div></div>
+    <div class="kpi-card"><div class="kpi-label">自然GMV占比</div><div class="kpi-value">42%</div><div class="kpi-change up">↑ 5pp</div></div>
+    <div class="kpi-card"><div class="kpi-label">退货率</div><div class="kpi-value">5.2%</div><div class="kpi-change down">↓ 0.8pp</div></div>
+    <div class="kpi-card"><div class="kpi-label">综合ROI</div><div class="kpi-value">2.8</div><div class="kpi-change up">↑ 0.3</div></div>
+    <div class="kpi-card"><div class="kpi-label">客单价</div><div class="kpi-value">¥72</div><div class="kpi-change up">↑ ¥3</div></div>
+  </div>
+  <div class="chart-row cols-2">
+    <div class="chart-card">
+      <h3>💰 GMV来源拆解 <span class="badge locked">🔒</span></h3>
+      <table><thead><tr><th>来源</th><th>GMV</th><th>占比</th><th>自然GMV</th><th>付费GMV</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-blue">内容成交</span></td><td>¥680万</td><td>43%</td><td>¥285万</td><td>¥395万</td></tr>
+        <tr><td><span class="tag tag-orange">搜索成交</span></td><td>¥450万</td><td>28%</td><td>¥220万</td><td>¥230万</td></tr>
+        <tr><td><span class="tag tag-green">商城成交</span></td><td>¥450万</td><td>28%</td><td>—</td><td>—</td></tr>
+      </tbody></table>
+    </div>
+    <div class="chart-card">
+      <h3>📉 转化漏斗 <span class="badge locked">🔒</span></h3>
+      <div class="funnel-bar"><span class="funnel-label">播放</span><div class="funnel-fill" style="width:100%;background:var(--accent)">2,850万</div><span class="funnel-val">100%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">购物车点击</span><div class="funnel-fill" style="width:3.2%;background:#5e9cf7">91万</div><span class="funnel-val">3.2%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">商品浏览</span><div class="funnel-fill" style="width:2.8%;background:var(--accent-purple)">80万</div><span class="funnel-val">2.8%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">加购</span><div class="funnel-fill" style="width:1.5%;background:var(--accent-orange)">43万</div><span class="funnel-val">1.5%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">下单</span><div class="funnel-fill" style="width:1.2%;background:var(--accent-red)">34万</div><span class="funnel-val">1.2%</span></div>
+      <div class="funnel-bar"><span class="funnel-label">支付</span><div class="funnel-fill" style="width:1.0%;background:var(--accent-green)">28万单</div><span class="funnel-val">1.0%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Page: 品牌资产 ===== -->
+<div class="page" id="page-brandasset">
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-label">A3种草人群</div><div class="kpi-value">285万</div><div class="kpi-change up">↑ 22% vs 上月</div></div>
+    <div class="kpi-card"><div class="kpi-label">A3→A4流转率</div><div class="kpi-value">25%</div><div class="kpi-change up">↑ 3pp</div></div>
+    <div class="kpi-card"><div class="kpi-label">品牌搜索指数</div><div class="kpi-value">185</div><div class="kpi-change up">↑ 18%</div></div>
+    <div class="kpi-card"><div class="kpi-label">CPA3</div><div class="kpi-value">¥2.33</div><div class="kpi-change down">↓ 10%</div></div>
+    <div class="kpi-card"><div class="kpi-label">品牌力指数</div><div class="kpi-value">72</div><div class="kpi-change up">↑ 5 vs 上月</div></div>
+  </div>
+
+  <div class="chart-row cols-2">
+    <!-- Left: 5A Funnel -->
+    <div class="chart-card" style="padding:24px;">
+      <h3>👥 O-5A 人群资产金字塔 <span class="badge locked">🔒</span> <span style="font-size:11px;color:var(--text-dim);margin-left:auto;">📋 快照周 W28 · 2026-07-16</span></h3>
+
+      <!-- O crowd (top - opportunity) -->
+      <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--text-dim);background:rgba(255,255,255,.04);padding:2px 8px;border-radius:4px;">O 机会人群</span>
+        <span style="font-size:13px;font-weight:600;">1,280万</span>
+        <span style="font-size:11px;color:var(--text-dim);">品类潜在用户总规模</span>
+      </div>
+
+      <!-- 5A Stages -->
+      <div class="fiveA-stages" style="margin-top:4px;">
+        <!-- A1: 认知 -->
+        <div class="fiveA-stage fiveA-stage-a1">
+          <div class="fiveA-bar stage-a1-width">
+            <span class="stage-label">A1 认知</span>
+            <span class="stage-desc">被动曝光</span>
+            <span class="stage-count">520万</span>
+            <span class="stage-unit">人</span>
+            <span class="stage-change up">↑ 8%</span>
+          </div>
+        </div>
+        <!-- Flow A1→A2 -->
+        <div class="flow-arrow-container" style="padding-left:4.5%;">
+          <svg class="flow-arrow-svg" viewBox="0 0 600 36" preserveAspectRatio="none">
+            <defs><marker id="arrowhead-a1a2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5e7dba"/></marker></defs>
+            <line x1="8" y1="8" x2="580" y2="28" stroke="#5e7dba" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowhead-a1a2)"/>
+          </svg>
+          <span class="flow-rate-badge">A1→A2 73%</span>
+        </div>
+        <!-- A2: 兴趣 -->
+        <div class="fiveA-stage fiveA-stage-a2">
+          <div class="fiveA-bar stage-a2-width">
+            <span class="stage-label">A2 兴趣</span>
+            <span class="stage-desc">浅层互动</span>
+            <span class="stage-count">380万</span>
+            <span class="stage-unit">人</span>
+            <span class="stage-change up">↑ 15%</span>
+          </div>
+        </div>
+        <!-- Flow A2→A3 (highlighted) -->
+        <div class="flow-arrow-container" style="padding-left:9.5%;">
+          <svg class="flow-arrow-svg" viewBox="0 0 600 36" preserveAspectRatio="none">
+            <defs><marker id="arrowhead-a2a3" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#34c759"/></marker></defs>
+            <line x1="8" y1="8" x2="580" y2="28" stroke="#34c759" stroke-width="2.5" stroke-dasharray="6,3" marker-end="url(#arrowhead-a2a3)"/>
+          </svg>
+          <span class="flow-rate-badge highlight">A2→A3 75% ⬆</span>
+        </div>
+        <!-- A3: 种草 (highlighted) -->
+        <div class="fiveA-stage fiveA-stage-a3" style="margin:4px 0;">
+          <div class="fiveA-bar stage-a3-width">
+            <span class="stage-label">🌟 A3 种草</span>
+            <span class="stage-desc">深度种草</span>
+            <span class="stage-count">285万</span>
+            <span class="stage-unit">人</span>
+            <span class="stage-change up" style="background:rgba(52,199,89,.2);font-weight:600;">↑ 22%</span>
+          </div>
+        </div>
+        <!-- Flow A3→A4 -->
+        <div class="flow-arrow-container" style="padding-left:16%;">
+          <svg class="flow-arrow-svg" viewBox="0 0 600 36" preserveAspectRatio="none">
+            <defs><marker id="arrowhead-a3a4" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#d4883a"/></marker></defs>
+            <line x1="8" y1="8" x2="580" y2="28" stroke="#d4883a" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowhead-a3a4)"/>
+          </svg>
+          <span class="flow-rate-badge">A3→A4 25% ⬆</span>
+        </div>
+        <!-- A4: 购买 -->
+        <div class="fiveA-stage fiveA-stage-a4">
+          <div class="fiveA-bar stage-a4-width">
+            <span class="stage-label">A4 购买</span>
+            <span class="stage-desc">首购用户</span>
+            <span class="stage-count">72万</span>
+            <span class="stage-unit">人</span>
+            <span class="stage-change up">↑ 12%</span>
+          </div>
+        </div>
+        <!-- Flow A4→A5 -->
+        <div class="flow-arrow-container" style="padding-left:24%;">
+          <svg class="flow-arrow-svg" viewBox="0 0 600 36" preserveAspectRatio="none">
+            <defs><marker id="arrowhead-a4a5" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#c4554a"/></marker></defs>
+            <line x1="8" y1="8" x2="580" y2="28" stroke="#c4554a" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowhead-a4a5)"/>
+          </svg>
+          <span class="flow-rate-badge warn">A4→A5 53%</span>
+        </div>
+        <!-- A5: 复购 -->
+        <div class="fiveA-stage fiveA-stage-a5">
+          <div class="fiveA-bar stage-a5-width">
+            <span class="stage-label">A5 复购</span>
+            <span class="stage-desc">品牌忠诚</span>
+            <span class="stage-count">38万</span>
+            <span class="stage-unit">人</span>
+            <span class="stage-change up">↑ 8%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div style="display:flex;gap:16px;margin-top:16px;padding-top:12px;border-top:1px solid var(--card-border);font-size:11px;color:var(--text-dim);flex-wrap:wrap;">
+        <span>📊 各层级宽度 = 人群量级比例</span>
+        <span>|</span>
+        <span style="color:#34c759;">━</span><span> A3种草层 = 关键转化节点</span>
+        <span>|</span>
+        <span>流转率 = 上层 → 下层的转化比例</span>
+      </div>
+    </div>
+
+    <!-- Right: A3 Deep Dive + Flow Details -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <!-- A3 Highlight Card -->
+      <div class="a3-highlight-card">
+        <h4>🌟 A3 种草人群深度分析</h4>
+        <div class="fiveA-grid">
+          <div class="fiveA-cell a3">
+            <div class="cell-value" style="color:#34c759;">285万</div>
+            <div class="cell-label">A3 总量</div>
+            <div class="cell-sub" style="color:#34c759;">↑ 22% WoW</div>
+          </div>
+          <div class="fiveA-cell a3">
+            <div class="cell-value" style="color:#4f8ff7;">168万</div>
+            <div class="cell-label">自然新增</div>
+            <div class="cell-sub" style="color:var(--text-dim);">占比 59%</div>
+          </div>
+          <div class="fiveA-cell a3">
+            <div class="cell-value" style="color:#ff9f0a;">117万</div>
+            <div class="cell-label">付费新增</div>
+            <div class="cell-sub" style="color:var(--text-dim);">占比 41%</div>
+          </div>
+          <div class="fiveA-cell a3">
+            <div class="cell-value">¥2.33</div>
+            <div class="cell-label">CPA3</div>
+            <div class="cell-sub" style="color:#34c759;">↓ 10%</div>
+          </div>
+          <div class="fiveA-cell a3">
+            <div class="cell-value" style="color:#34c759;">25%</div>
+            <div class="cell-label">A3→A4 流转</div>
+            <div class="cell-sub" style="color:#34c759;">↑ 3pp</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full 5A Summary Grid -->
+      <div class="chart-card" style="padding:18px;">
+        <h3 style="font-size:14px;margin-bottom:12px;">📋 5A 人群总览 <span class="badge hideable">☑</span></h3>
+        <div class="fiveA-grid">
+          <div class="fiveA-cell a1">
+            <div class="cell-icon">👁️</div>
+            <div class="cell-value">520万</div>
+            <div class="cell-label">A1 认知</div>
+            <div class="cell-sub" style="color:#34c759;">↑ 8%</div>
+          </div>
+          <div class="fiveA-cell a2">
+            <div class="cell-icon">❤️</div>
+            <div class="cell-value">380万</div>
+            <div class="cell-label">A2 兴趣</div>
+            <div class="cell-sub" style="color:#34c759;">↑ 15%</div>
+          </div>
+          <div class="fiveA-cell a3">
+            <div class="cell-icon">⭐</div>
+            <div class="cell-value" style="color:#34c759;">285万</div>
+            <div class="cell-label">A3 种草</div>
+            <div class="cell-sub" style="color:#34c759;">↑ 22%</div>
+          </div>
+          <div class="fiveA-cell a4">
+            <div class="cell-icon">🛒</div>
+            <div class="cell-value">72万</div>
+            <div class="cell-label">A4 购买</div>
+            <div class="cell-sub" style="color:#34c759;">↑ 12%</div>
+          </div>
+          <div class="fiveA-cell a5">
+            <div class="cell-icon">🔄</div>
+            <div class="cell-value">38万</div>
+            <div class="cell-label">A5 复购</div>
+            <div class="cell-sub" style="color:#34c759;">↑ 8%</div>
+          </div>
+        </div>
+        <div class="flow-arrow-row" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--card-border);">
+          <div class="flow-arrow-item"><span class="arrow">→</span> O→A1 <span class="rate">40.6%</span></div>
+          <div class="flow-arrow-item"><span class="arrow">→</span> A1→A2 <span class="rate">73.1%</span></div>
+          <div class="flow-arrow-item" style="color:#34c759;"><span class="arrow" style="color:#34c759;">→</span> A2→A3 <span class="rate" style="color:#34c759;">75.0% ⬆</span></div>
+          <div class="flow-arrow-item"><span class="arrow">→</span> A3→A4 <span class="rate" style="color:#34c759;">25.3% ⬆</span></div>
+          <div class="flow-arrow-item"><span class="arrow">→</span> A4→A5 <span class="rate" style="color:#ff9f0a;">52.8%</span></div>
+        </div>
+      </div>
+
+      <!-- CPA Trend -->
+      <div class="chart-card" style="padding:18px;">
+        <h3 style="font-size:14px;margin-bottom:12px;">📈 CPA1 / CPA3 周趋势 <span class="badge hideable">☑</span></h3>
+        <table><thead><tr><th>周</th><th>CPA1</th><th>CPA3</th><th>A3增量</th><th>A3总量</th></tr></thead>
+        <tbody>
+          <tr><td>W26</td><td>¥0.15</td><td>¥2.80</td><td>22万</td><td>235万</td></tr>
+          <tr><td>W27</td><td>¥0.12</td><td>¥2.50</td><td>25万</td><td>260万</td></tr>
+          <tr style="color:var(--accent);"><td>W28</td><td>¥0.10</td><td style="color:#34c759;">¥2.33</td><td style="color:#34c759;">28万</td><td style="color:#34c759;">285万</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ============================================================
+// ACCESS CONTROL SYSTEM
+// ============================================================
+// Password hashes (SHA-256). Change these to set your own passwords.
+// Generate with: CryptoJS.SHA256("your_password").toString()
+const USERS = {
+  // Default: admin123
+  "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9": { role: "admin",  label: "管理员", icon: "👑" },
+  // Default: operate456
+  "1e953525cd8c3c54d84e485d2a46200691c4a1731ca0f4bdd288101ef19e0f9e": { role: "operator", label: "操作人", icon: "🔧" },
+  // Default: view789
+  "b86b7df459e6a83b9f6ca6fed8c4e0d9c171b5e7370956b5d8ed8d9c3a197d9a": { role: "viewer",  label: "查看人", icon: "👁️" }
+};
+
+function doLogin() {
+  const pwd = document.getElementById('loginPassword').value.trim();
+  const err = document.getElementById('loginError');
+  if (!pwd) { err.textContent = '请输入密码'; return; }
+  
+  const hash = CryptoJS.SHA256(pwd).toString();
+  const user = USERS[hash];
+  
+  if (user) {
+    // Save to sessionStorage (clears on browser close)
+    sessionStorage.setItem('dashboard_role', user.role);
+    sessionStorage.setItem('dashboard_label', user.label);
+    sessionStorage.setItem('dashboard_icon', user.icon);
+    sessionStorage.setItem('dashboard_auth', 'true');
+    document.getElementById('loginOverlay').classList.add('hidden');
+    applyRole(user.role, user.label, user.icon);
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginError').textContent = '';
+  } else {
+    err.textContent = '密码错误，请重试';
+    document.getElementById('loginPassword').value = '';
+  }
+}
+
+function logout() {
+  sessionStorage.clear();
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.body.className = '';
+  document.getElementById('userBadge').className = 'user-badge';
+  document.getElementById('userBadge').textContent = '';
+  document.getElementById('loginPassword').focus();
+}
+
+function applyRole(role, label, icon) {
+  // Set body class for CSS role-based rules
+  document.body.className = 'role-' + role;
+  // Update badge
+  const badge = document.getElementById('userBadge');
+  badge.className = 'user-badge ' + role;
+  badge.innerHTML = icon + ' ' + label + ' <span style="font-size:10px;opacity:.6;">点击退出</span>';
+  
+  // Viewer restrictions
+  if (role === 'viewer') {
+    // Disable metric panel toggle
+    window._originalToggleMetric = toggleMetricPanel;
+    toggleMetricPanel = function() { alert('查看人权限不足，仅可查看数据'); };
+    // Disable upload
+    window._originalOpenUpload = openUploadModal;
+    openUploadModal = function() { alert('查看人权限不足，仅可查看数据'); };
+    // Make inputs readonly
+    document.querySelectorAll('#metricPanel input[type="checkbox"]:not([disabled])').forEach(cb => cb.disabled = true);
+  }
+  
+  // Operator: can upload and modify metrics, but not change system settings
+  if (role === 'operator') {
+    // Operator can do everything except admin functions (currently same as admin for this prototype)
+  }
+  
+  // Admin: full access (no restrictions)
+  if (role === 'admin') {
+    // Restore original functions if they were overridden
+    if (window._originalToggleMetric) { toggleMetricPanel = window._originalToggleMetric; }
+    if (window._originalOpenUpload) { openUploadModal = window._originalOpenUpload; }
+    document.querySelectorAll('#metricPanel input[type="checkbox"]').forEach(cb => cb.disabled = false);
+  }
+}
+
+// Check session on page load
+(function() {
+  const auth = sessionStorage.getItem('dashboard_auth');
+  if (auth === 'true') {
+    const role = sessionStorage.getItem('dashboard_role');
+    const label = sessionStorage.getItem('dashboard_label');
+    const icon = sessionStorage.getItem('dashboard_icon');
+    document.getElementById('loginOverlay').classList.add('hidden');
+    applyRole(role, label, icon);
+  }
+})();
+
+// ============================================================
+// DASHBOARD LOGIC
+// ============================================================
+
+// Navigation
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + tab.dataset.page).classList.add('active');
+  });
+});
+
+// Purpose switcher
+document.querySelectorAll('#purposeControl .control-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#purposeControl .control-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// Traffic switcher
+document.querySelectorAll('#trafficControl .control-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#trafficControl .control-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// Metric panel
+function toggleMetricPanel() {
+  document.getElementById('metricPanel').classList.toggle('open');
+  document.getElementById('metricOverlay').classList.toggle('open');
+}
+
+function resetMetrics() {
+  if (confirm('恢复当前页面的默认指标配置？')) {
+    alert('已恢复默认配置');
+  }
+}
+
+// Upload modal
+function openUploadModal() {
+  document.getElementById('uploadModal').classList.add('open');
+}
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('open');
+}
+document.querySelectorAll('#sourceSelect .source-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    document.querySelectorAll('#sourceSelect .source-opt').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+  });
+});
+</script>
+
+</body>
+</html>
