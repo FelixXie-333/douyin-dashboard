@@ -130,7 +130,20 @@ var STORE = {
   xzt: {spend:12981, totalPlay:99564130, totalEng:2989498, xztPlay:873584, xztEng:873584},
   // 5A 
   fiveA: {total:45930452, a1:33274328, a2:11782069, a3:874055, a4:null, a5:null,
-          j1_total:15095248, j1_a1:13890699, j1_a2:1188765, j1_a3:15784}
+          j1_total:15095248, j1_a1:13890699, j1_a2:1188765, j1_a3:15784},
+  nonStarCreators: [
+    {typ:"艺人",n:"胡连馨儿",p:1140100,op:274480,pp:865620,l:60100,c:508,col:3455,s:1998,eng:66061,fee:58479,a3:0},
+    {typ:"艺人",n:"毛晓彤",p:12411081,op:1994567,pp:10416514,l:412367,c:6455,col:13000,s:8741,eng:440563,fee:415369,a3:241895},
+    {typ:"艺人",n:"王楚然粉丝",p:172355,op:0,pp:172355,l:0,c:0,col:0,s:0,eng:6700,fee:101213,a3:0},
+    {typ:"艺人",n:"王楚然工作室",p:194215,op:126330,pp:67885,l:23000,c:178,col:896,s:533,eng:24607,fee:2500,a3:0},
+    {typ:"艺人",n:"侯明昊",p:0,op:0,pp:0,l:0,c:0,col:0,s:0,eng:0,fee:150000,a3:0},
+    {typ:"官号",n:"优C满益",p:8386928,op:0,pp:8386928,l:0,c:0,col:0,s:0,eng:32341,fee:44479,a3:0},
+    {typ:"KOL",n:"娱乐星鲜社",p:769354,op:79317,pp:690037,l:15052,c:201,col:568,s:252,eng:16073,fee:12921,a3:21185},
+    {typ:"KOL",n:"王嘻凤",p:1591057,op:318719,pp:1272338,l:12029,c:194,col:547,s:514,eng:13284,fee:18852,a3:27637},
+    {typ:"KOL",n:"芒果妈妈",p:1535737,op:831206,pp:704531,l:25760,c:179,col:962,s:531,eng:27432,fee:42976,a3:32197},
+    {typ:"KOL",n:"抓马刘翠花",p:1623830,op:387786,pp:1236044,l:29584,c:144,col:1158,s:1090,eng:31976,fee:38946,a3:55446},
+    {typ:"KOL",n:"野生小娱妹",p:1417645,op:18467,pp:1399178,l:9939,c:157,col:841,s:661,eng:11598,fee:20883,a3:44454}
+  ]
 };
 </script>
 
@@ -206,7 +219,7 @@ var STORE = {
 <!-- 👤 非星图达人 -->
 <div id="sub-nonstar" class="creator-sub">
 <div class="kr">
-<div class="kc"><div class="kl">非星图达人</div><div class="kv" style="color:var(--td)">0</div><div class="kh">待补充</div></div>
+<div class="kc"><div class="kl">非星图达人</div><div class="kv">11</div><div class="kh">待补充</div></div>
 <div class="kc"><div class="kl">总费用</div><div class="kv" style="color:var(--td)">—</div><div class="kh">无数据源</div></div>
 <div class="kc"><div class="kl">总播放量</div><div class="kv" style="color:var(--td)">—</div><div class="kh">无数据源</div></div>
 <div class="kc"><div class="kl">总互动量</div><div class="kv" style="color:var(--td)">—</div><div class="kh">无数据源</div></div>
@@ -223,7 +236,8 @@ var STORE = {
 <table><thead><tr>
 <th>达人</th><th>层级</th><th>MCN</th><th>播放量</th><th>互动率</th><th>CPE</th><th>费用</th><th>看后搜</th>
 </tr></thead><tbody>
-<tr><td colspan="8" class="na" style="text-align:center;padding:40px;">暂无数据。非星图达人数据需手工录入或从品牌自有系统接入。</td></tr>
+<tr><th>达人</th><th>类型</th><th>总播放</th><th>自然播放</th><th>付费播放</th><th>总互动</th><th>互动率</th><th>费用</th><th>CPE</th><th>A3</th></tr>
+</thead><tbody id="tbl-nonstar-body"></tbody>
 </tbody></table>
 </div></div></div>
 <!-- 🛒 带货达人 -->
@@ -439,7 +453,7 @@ var STORE = {
 
 <div class="fb">
 <span>📊 数据截止 2026-07-20</span><span>|</span>
-<span>星图(07-20快照) · 种草通/声量宝/星助推(07-01~07-19) · 星智投(累计) · 云图5A(07-01→07-17)</span>
+<span>星图+水下(07-20快照) · 种草通/声量宝/星助推(07-01~07-19) · 星智投(累计) · 云图5A(07-01→07-17)</span>
 <span>|</span><span>— 数据源未接入</span>
 <span style="margin-left:auto">千川/罗盘/A4A5 待接入</span>
 </div>
@@ -586,16 +600,28 @@ function updateKPIs(){
 
 function setEl(id,val){var e=document.getElementById(id);if(e){if(typeof val==='string'&&val.startsWith('width:')){e.setAttribute('style',val)}else{e.textContent=val}}}
 
+
+function renderNonStarTable(){
+  var tb=document.getElementById("tbl-nonstar-body");
+  if(!tb)return;
+  tb.innerHTML="";
+  if(!STORE.nonStarCreators){return}
+  STORE.nonStarCreators.forEach(function(c){
+    if(c.p===0)return;
+    var rate=c.eng/c.p*100;
+    tb.innerHTML+="<tr><td>"+c.n+"</td><td>"+c.typ+"</td><td>"+fmt(c.p)+"</td><td>"+fmt(c.op)+"</td><td>"+fmt(c.pp)+"</td><td>"+fmt(c.eng)+"</td><td>"+rate.toFixed(2)+"%</td><td>"+fmtMoney(c.fee)+"</td><td>"+fmtCPE(c.fee,c.eng)+"</td><td>"+(c.a3>0?fmt(c.a3):"<span class=na>—</span>")+"</td></tr>";
+  });
+}
 function refreshCurrentPage(){
   // Creator sub-tabs
 document.querySelectorAll('.nt-creator').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.nt-creator').forEach(function(x){x.classList.remove('active');x.style.background='';x.style.color=''});b.classList.add('active');b.style.background='var(--a)';b.style.color='#fff';document.querySelectorAll('.creator-sub').forEach(function(s){s.classList.remove('active')});document.getElementById('sub-'+b.dataset.sub).classList.add('active')})});
-renderCreatorTable();renderContentTable();updateKPIs();
+renderCreatorTable();renderContentTable();renderNonStarTable();updateKPIs();
 }
 
 // ── INIT ──
 // Creator sub-tabs
 document.querySelectorAll('.nt-creator').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.nt-creator').forEach(function(x){x.classList.remove('active');x.style.background='';x.style.color=''});b.classList.add('active');b.style.background='var(--a)';b.style.color='#fff';document.querySelectorAll('.creator-sub').forEach(function(s){s.classList.remove('active')});document.getElementById('sub-'+b.dataset.sub).classList.add('active')})});
-renderCreatorTable();renderContentTable();updateKPIs();
+renderCreatorTable();renderContentTable();renderNonStarTable();updateKPIs();
 </script>
 </body>
 </html>
