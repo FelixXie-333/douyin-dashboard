@@ -178,7 +178,8 @@ var STORE = {
 </div>
 <div class="cc"><h3>💰 成本分布（7月）</h3>
 <table>
-<tr><td><span class="tag tg">星图达人费</span></td><td id="t-cost-star">—</td><td><div class="bc"><span id="t-cost-star-pct">—</span><div class="bb"><div class="bf g" id="b-cost-star" style="width:0%"></div></div></div></td></tr>
+<tr><td><span class="tag tg">星图达人费</span></td><td id="t-cost-star">—</td></tr>
+<tr><td><span class="tag" style="background:rgba(139,143,163,.15);color:#8b8fa3;">非星图(水下)</span></td><td id="t-cost-nonstar">—</td><td><div class="bc"><span id="t-cost-ns-pct">—</span></div></td></tr><td><div class="bc"><span id="t-cost-star-pct">—</span><div class="bb"><div class="bf g" id="b-cost-star" style="width:0%"></div></div></div></td></tr>
 <tr><td><span class="tag tb">种草通</span></td><td>¥210,445</td><td><div class="bc"><span id="t-cost-st-pct">—</span><div class="bb"><div class="bf b" id="b-cost-st" style="width:0%"></div></div></div></td></tr>
 <tr><td><span class="tag to">声量宝</span></td><td>¥60,802</td><td><div class="bc"><span id="t-cost-sl-pct">—</span><div class="bb"><div class="bf o" id="b-cost-sl" style="width:0%"></div></div></div></td></tr>
 <tr><td><span class="tag tp">星智投</span></td><td>¥12,981</td><td><div class="bc"><span id="t-cost-xz-pct">—</span><div class="bb"><div class="bf p" id="b-cost-xz" style="width:0%"></div></div></div></td></tr>
@@ -589,12 +590,13 @@ function updateKPIs(){
   setEl('k-ct-cpe',fmtCPE(tfee,teng));
 
   // CEO page
+  var nsFee=STORE.nonStarCreators?STORE.nonStarCreators.reduce(function(s,c){return s+(c.fee||0)},0):0;
   var stSpend=STORE.seedingPass.spend,slSpend=STORE.slb.spend,xzSpend=STORE.xzt.spend;
-  setEl('k-ceo-cost',fmtMoney(tfee+stSpend+slSpend+xzSpend));
+  var totalCost=tfee+nsFee+stSpend+slSpend+xzSpend;
+  setEl('k-ceo-cost',fmtMoney(totalCost));
   setEl('k-ceo-creators',count);
   setEl('k-ceo-play',fmt(tplay));
   setEl('t-cost-star',fmtMoney(tfee));
-  var totalCost=tfee+stSpend+slSpend+xzSpend;
   var sp=tfee/totalCost*100,stp=stSpend/totalCost*100,slp=slSpend/totalCost*100,xzp=xzSpend/totalCost*100;
   setEl('t-cost-star-pct',sp.toFixed(0)+'%'); setEl('b-cost-star','width:'+sp.toFixed(0)+'%');
   setEl('t-cost-st-pct',stp.toFixed(0)+'%'); setEl('b-cost-st','width:'+stp.toFixed(0)+'%');
