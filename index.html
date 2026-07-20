@@ -588,12 +588,13 @@ function updateKPIs(){
   setEl('k-ct-cpe',fmtCPE(tfee,teng));
 
   // CEO page
-  setEl('k-ceo-cost',fmtMoney(tfee+122324+60302+12981));
+  var stSpend=STORE.seedingPass.spend,slSpend=STORE.slb.spend,xzSpend=STORE.xzt.spend;
+  setEl('k-ceo-cost',fmtMoney(tfee+stSpend+slSpend+xzSpend));
   setEl('k-ceo-creators',count);
   setEl('k-ceo-play',fmt(tplay));
   setEl('t-cost-star',fmtMoney(tfee));
-  var totalCost=tfee+122324+60302+12981;
-  var sp=tfee/totalCost*100,stp=122324/totalCost*100,slp=60302/totalCost*100,xzp=12981/totalCost*100;
+  var totalCost=tfee+stSpend+slSpend+xzSpend;
+  var sp=tfee/totalCost*100,stp=stSpend/totalCost*100,slp=slSpend/totalCost*100,xzp=xzSpend/totalCost*100;
   setEl('t-cost-star-pct',sp.toFixed(0)+'%'); setEl('b-cost-star','width:'+sp.toFixed(0)+'%');
   setEl('t-cost-st-pct',stp.toFixed(0)+'%'); setEl('b-cost-st','width:'+stp.toFixed(0)+'%');
   setEl('t-cost-sl-pct',slp.toFixed(0)+'%'); setEl('b-cost-sl','width:'+slp.toFixed(0)+'%');
@@ -631,9 +632,7 @@ function renderNonStarTable(){
     "<div class=kc><div class=kl>CPE</div><div class=kv>"+fmtCPE(totalFee,totalEng)+"</div><div class=kh>—</div></div>";
 }
 function refreshCurrentPage(){
-  // Creator sub-tabs
-document.querySelectorAll('.nt-creator').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.nt-creator').forEach(function(x){x.classList.remove('active');x.style.background='';x.style.color=''});b.classList.add('active');b.style.background='var(--a)';b.style.color='#fff';document.querySelectorAll('.creator-sub').forEach(function(s){s.classList.remove('active')});document.getElementById('sub-'+b.dataset.sub).classList.add('active')})});
-renderCreatorTable();renderContentTable();renderNonStarTable();updateKPIs();
+  renderCreatorTable();renderContentTable();renderNonStarTable();updateKPIs();
 }
 
 // ── INIT ──
