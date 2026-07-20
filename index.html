@@ -68,6 +68,7 @@ tr:hover td{background:rgba(79,143,247,.04)}tr.hidden{display:none}
 .login-c .lh{color:var(--td);font-size:10px;margin-top:14px;line-height:1.5}
 .ub{display:flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:5px;cursor:pointer}
 .ub.ad{background:rgba(191,90,242,.15);color:#bf5af2}.ub.op{background:rgba(79,143,247,.15);color:#4f8ff7}.ub.vw{background:rgba(139,143,163,.12);color:#8b8fa3}
+.creator-sub{display:none}.creator-sub.active{display:block}.nt-creator.active{background:var(--a)!important;color:#fff!important}
 .role-v .ubtn{display:none!important}
 </style>
 </head>
@@ -166,23 +167,31 @@ var STORE = {
 
 <!-- ====== 达人资产 ====== -->
 <div class="page" id="page-creator">
+<!-- Sub-navigation -->
+<div style="display:flex;gap:4px;margin-bottom:14px;background:var(--cbg);border:1px solid var(--cbd);border-radius:8px;padding:3px;width:fit-content;">
+<button class="nt-creator active" data-sub="star" style="padding:6px 16px;border:none;background:transparent;color:var(--td);border-radius:6px;cursor:pointer;font-size:13px;">⭐ 星图达人</button>
+<button class="nt-creator" data-sub="nonstar" style="padding:6px 16px;border:none;background:transparent;color:var(--td);border-radius:6px;cursor:pointer;font-size:13px;">👤 非星图达人</button>
+<button class="nt-creator" data-sub="sales" style="padding:6px 16px;border:none;background:transparent;color:var(--td);border-radius:6px;cursor:pointer;font-size:13px;">🛒 带货达人</button>
+</div>
+<!-- ⭐ 星图达人 -->
+<div id="sub-star" class="creator-sub active">
 <div class="kr">
 <div class="kc"><div class="kl">合作达人</div><div class="kv" id="k-cr-count">—</div><div class="kh">7/3-7/15 发布</div></div>
 <div class="kc"><div class="kl">总达人费用</div><div class="kv" id="k-cr-fee">—</div><div class="kh" id="k-cr-avgfee">—</div></div>
 <div class="kc"><div class="kl">总播放量</div><div class="kv" id="k-cr-play">—</div><div class="kh">星图累计快照</div></div>
 <div class="kc"><div class="kl">总互动量</div><div class="kv" id="k-cr-eng">—</div><div class="kh" id="k-cr-rate">—</div></div>
-<div class="kc"><div class="kl">CPE(达人费)</div><div class="kv" id="k-cr-cpe">—</div><div class="kh id="k-cr-search">—</div></div>
+<div class="kc"><div class="kl">CPE(达人费)</div><div class="kv" id="k-cr-cpe">—</div><div class="kh">看后搜 <span id="k-cr-search">—</span></div></div>
 </div>
-<div class="cc"><h3>🏅 达人排行榜</h3>
+<div class="cc"><h3>🏅 星图达人排行榜</h3>
 <div class="toolbar">
 <input type="text" placeholder="🔍 搜索达人/MCN..." oninput="filterTable('tbl-creator',this.value)">
-<select onchange="filterTable('tbl-creator',document.querySelector('#page-creator input').value)">
+<select onchange="filterTable('tbl-creator',document.querySelector('#sub-star input').value)">
 <option value="">全部层级</option><option value="头部">头部</option><option value="腰部">腰部</option><option value="尾部">尾部</option>
 </select>
 <button class="ubtn" onclick="resetFilter('tbl-creator')" style="font-size:11px">清除筛选</button>
 <span style="font-size:11px;color:var(--td);margin-left:auto" id="tbl-creator-info"></span>
 </div>
-<div style="max-height:480px;overflow-y:auto">
+<div style="max-height:420px;overflow-y:auto">
 <table id="tbl-creator"><thead><tr>
 <th class="sortable" onclick="sortTable('tbl-creator',0)">达人</th>
 <th class="sortable" onclick="sortTable('tbl-creator',1)">层级</th>
@@ -194,6 +203,54 @@ var STORE = {
 <th class="sortable" onclick="sortTable('tbl-creator',7)">看后搜</th>
 </tr></thead><tbody></tbody></table>
 </div></div></div>
+<!-- 👤 非星图达人 -->
+<div id="sub-nonstar" class="creator-sub">
+<div class="kr">
+<div class="kc"><div class="kl">非星图达人</div><div class="kv" style="color:var(--td)">0</div><div class="kh">待补充</div></div>
+<div class="kc"><div class="kl">总费用</div><div class="kv" style="color:var(--td)">—</div><div class="kh">无数据源</div></div>
+<div class="kc"><div class="kl">总播放量</div><div class="kv" style="color:var(--td)">—</div><div class="kh">无数据源</div></div>
+<div class="kc"><div class="kl">总互动量</div><div class="kv" style="color:var(--td)">—</div><div class="kh">无数据源</div></div>
+<div class="kc"><div class="kl">CPE</div><div class="kv" style="color:var(--td)">—</div><div class="kh">无数据源</div></div>
+</div>
+<div class="cc"><h3>👤 非星图达人</h3>
+<div class="cs">与星图达人维度保持一致。数据来源待接入（品牌自有合作、置换达人等）。</div>
+<div class="toolbar">
+<input type="text" placeholder="🔍 搜索...">
+<button class="ubtn" onclick="this.parentElement.querySelector('input').value=''" style="font-size:11px">清除</button>
+<span style="font-size:11px;color:var(--td);margin-left:auto">显示 0/0 条</span>
+</div>
+<div style="max-height:420px;overflow-y:auto">
+<table><thead><tr>
+<th>达人</th><th>层级</th><th>MCN</th><th>播放量</th><th>互动率</th><th>CPE</th><th>费用</th><th>看后搜</th>
+</tr></thead><tbody>
+<tr><td colspan="8" class="na" style="text-align:center;padding:40px;">暂无数据。非星图达人数据需手工录入或从品牌自有系统接入。</td></tr>
+</tbody></table>
+</div></div></div>
+<!-- 🛒 带货达人 -->
+<div id="sub-sales" class="creator-sub">
+<div class="kr">
+<div class="kc"><div class="kl">带货达人</div><div class="kv" style="color:var(--td)">0</div><div class="kh">待补充</div></div>
+<div class="kc"><div class="kl">直播间GMV</div><div class="kv" style="color:var(--td)">—</div><div class="kh">待罗盘数据</div></div>
+<div class="kc"><div class="kl">引流UV</div><div class="kv" style="color:var(--td)">—</div><div class="kh">待罗盘数据</div></div>
+<div class="kc"><div class="kl">GPM</div><div class="kv" style="color:var(--td)">—</div><div class="kh">千次展现成交额</div></div>
+<div class="kc"><div class="kl">ROI</div><div class="kv" style="color:var(--td)">—</div><div class="kh">GMV / 投放费用</div></div>
+</div>
+<div class="cc"><h3>🛒 带货达人（引流 & 销售转化）</h3>
+<div class="cs">聚焦直播带货和短视频挂车转化。数据来源：电商罗盘 + 千川。</div>
+<div class="toolbar">
+<input type="text" placeholder="🔍 搜索...">
+<select><option value="">全部类型</option><option>直播达人</option><option>短视频带货</option></select>
+<button class="ubtn" onclick="this.parentElement.querySelector('input').value=''" style="font-size:11px">清除</button>
+<span style="font-size:11px;color:var(--td);margin-left:auto">显示 0/0 条</span>
+</div>
+<div style="max-height:420px;overflow-y:auto">
+<table><thead><tr>
+<th>达人</th><th>类型</th><th>直播间GMV</th><th>GPM</th><th>引流UV</th><th>转化率</th><th>ROI</th><th>佣金</th><th>总GMV</th>
+</tr></thead><tbody>
+<tr><td colspan="9" class="na" style="text-align:center;padding:40px;">暂无数据。带货达人数据需从电商罗盘 + 千川接入。</td></tr>
+</tbody></table>
+</div></div></div>
+</div>
 
 <!-- ====== 内容表现 ====== -->
 <div class="page" id="page-content">
@@ -531,10 +588,14 @@ function updateKPIs(){
 function setEl(id,val){var e=document.getElementById(id);if(e){if(typeof val==='string'&&val.startsWith('width:')){e.setAttribute('style',val)}else{e.textContent=val}}}
 
 function refreshCurrentPage(){
-  renderCreatorTable();renderContentTable();updateKPIs();
+  // Creator sub-tabs
+document.querySelectorAll('.nt-creator').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.nt-creator').forEach(function(x){x.classList.remove('active');x.style.background='';x.style.color=''});b.classList.add('active');b.style.background='var(--a)';b.style.color='#fff';document.querySelectorAll('.creator-sub').forEach(function(s){s.classList.remove('active')});document.getElementById('sub-'+b.dataset.sub).classList.add('active')})});
+renderCreatorTable();renderContentTable();updateKPIs();
 }
 
 // ── INIT ──
+// Creator sub-tabs
+document.querySelectorAll('.nt-creator').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.nt-creator').forEach(function(x){x.classList.remove('active');x.style.background='';x.style.color=''});b.classList.add('active');b.style.background='var(--a)';b.style.color='#fff';document.querySelectorAll('.creator-sub').forEach(function(s){s.classList.remove('active')});document.getElementById('sub-'+b.dataset.sub).classList.add('active')})});
 renderCreatorTable();renderContentTable();updateKPIs();
 </script>
 </body>
