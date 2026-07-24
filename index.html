@@ -399,9 +399,9 @@ var STORE = {
 <div class="kr">
 <div class="kc"><div class="kl">消耗</div><div class="kv">¥1.3万</div><div class="kh">12 助推组</div></div>
 <div class="kc"><div class="kl">总播放(含自然)</div><div class="kv">9,956万</div><div class="kh">—</div></div>
-<div class="kc"><div class="kl">总互动</div><div class="kv">299万</div><div class="kh">总互动(含自然)</div></div></div>
+<d<div class="kc"><div class="kl">总互动</div><div class="kv">299万</div><div class="kh">总互动(含自然)</div></div>
 <div class="kc"><div class="kl">星智投播放</div><div class="kv">87.4万</div><div class="kh">占总播放 0.9%</div></div>
-<div class="kc"><div class="kl">CPE(投放)</div><div class="kv">¥0.005</div><div class="kh">= ¥12,981 / 2,989,498</div></div>
+<div class="kc"><div class="kl">CPE(投放)</div><div class="kv">¥0.015</div><div class="kh">= ¥12,981 / 873,584</div></div>
 </div>
 <table><thead><tr><th>指标</th><th>数值</th><th>说明</th></tr></thead>
 <tbody>
@@ -419,7 +419,8 @@ var STORE = {
 <h3>🔥 DOU+ <span class="tag" style="background:rgba(139,143,163,.08);color:var(--td);font-size:10px;">Dou+</span></h3>
 <div class="cs">数据待接入 · 抖音原生内容加热 · API弱，需手工填报</div>
 <table><tr><td class="na">DOU+数据需从抖音APP后台手工导出或填报。</td></tr></table>
-</div></div>
+</div>
+</div>
 
 <!-- ====== 电商转化 ====== -->
 <div class="page" id="page-conversion">
@@ -434,7 +435,7 @@ var STORE = {
 <div class="kr">
 <div class="kc"><div class="kl">5A总资产</div><div class="kv">5,422万</div><div class="kh up">7月 +3,912万（+259%）</div></div>
 <div class="kc"><div class="kl">A3种草人群</div><div class="kv">59.6万</div><div class="kh up">7月净增 58万（+3,676%）</div></div>
-<div class="kc"><div class="kl">种草通 CPA3</div><div class="kv">¥0.47</div><div class="kh">A3贡献 602,079</div></div>
+<div class="kc"><div class="kl">种草通 CPA3</div><div class="kv">¥0.35</div><div class="kh">A3贡献 602,079</div></div>
 <div class="kc"><div class="kl">A2→A3 流转率</div><div class="kv">5.4%</div><div class="kh">59.6万 / 1,110万</div></div>
 <div class="kc"><div class="kl">A1→A2 流转率</div><div class="kv">26.1%</div><div class="kh">1,110万 / 4,252万</div></div>
 </div>
@@ -531,6 +532,101 @@ function fmtPct(n){if(n===null||n===undefined)return'—';return(n*100).toFixed(
 function fmtMoney(n){if(n===null||n===undefined)return'—';if(n>=1e4)return'¥'+(n/1e4).toFixed(1)+'万';return'¥'+n.toLocaleString()}
 function fmtCPE(fee,eng){if(!eng||eng===0)return'—';return'¥'+(fee/eng).toFixed(2)}
 function tierTag(t){if(t==='头部')return'<span class="tag tp">头部</span>';if(t==='腰部')return'<span class="tag tb">腰部</span>';return'<span class="tag to">尾部</span>'}
+
+// ── UNIFIED DATA SYNC ──
+// Called after every STORE update to sync ALL hardcoded display values
+function syncAllDisplayValues(){
+  var S=STORE;
+  if(!S)return;
+
+  // ── 种草通 KPI cards (品牌广告 page) ──
+  var st=S.seedingPass;
+  if(st){
+    var cpe_st=(st.spend/st.eng).toFixed(2), cpa3_st=(st.spend/st.a3).toFixed(2);
+    updateCardKV('page-brand','消耗',fmtMoney(st.spend),'820 投放单元');
+    updateCardKV('page-brand','展示量',fmt(st.imp),'—');
+    updateCardKV('page-brand','播放量',fmt(st.play),'—');
+    updateCardKV('page-brand','总互动',fmt(st.eng),'CPE ¥'+cpe_st);
+    updateCardKV('page-brand','新增A3',fmt(st.a3),'CPA3 ¥'+cpa3_st);
+    // Detail table
+    updateDetailRow('page-brand','消耗',fmtMoney(st.spend));
+    updateDetailRow('page-brand','CPE','¥'+cpe_st);
+    updateDetailRow('page-brand','CPA3','¥'+cpa3_st);
+    updateDetailRow('page-brand','展示量',fmt(st.imp));
+    updateDetailRow('page-brand','播放量',fmt(st.play));
+    updateDetailRow('page-brand','互动量',fmt(st.eng));
+    updateDetailRow('page-brand','新增A3',fmt(st.a3));
+  }
+
+  // ── 声量宝 KPI cards (原生加热 page) ──
+  var sl=S.slb;
+  if(sl){
+    var cpe_sl=(sl.spend/sl.eng).toFixed(2);
+    updateCardKV('page-heating','消耗',fmtMoney(sl.spend),'93 订单');
+    updateCardKV('page-heating','播放量',fmt(sl.play),'—');
+    updateCardKV('page-heating','总互动',fmt(sl.eng),'互动率 '+(sl.eng/sl.play*100).toFixed(2)+'%');
+    updateCardKV('page-heating','CPE','¥'+cpe_sl,'= ¥'+sl.spend.toLocaleString()+' / '+sl.eng.toLocaleString());
+    updateCardKV('page-heating','看后搜',fmt(sl.search),'搜索成本 ¥'+(sl.spend/sl.search).toFixed(1));
+  }
+
+  // ── 星智投 KPI cards (原生加热 page) ──
+  var xz=S.xzt;
+  if(xz){
+    var cpe_xz=(xz.spend/xz.xztEng).toFixed(3);
+    updateCardKV('page-heating','消耗',fmtMoney(xz.spend),'12 助推组',1);
+    updateCardKV('page-heating','总播放',fmt(xz.totalPlay),'—',1);
+    updateCardKV('page-heating','总互动',fmt(xz.totalEng),'总互动(含自然)',1);
+    updateCardKV('page-heating','星智投播放',fmt(xz.xztPlay),'占总播放 '+(xz.xztPlay/xz.totalPlay*100).toFixed(1)+'%',1);
+    updateCardKV('page-heating','CPE(投放)','¥'+cpe_xz,'= ¥12,981 / '+fmt(xz.xztEng),1);
+  }
+
+  // ── CEO 种草通/声量宝 CPE text ──
+  var ceoLine=document.querySelector('#page-ceo div[style*="margin-top:10px"]');
+  if(ceoLine && st && sl){
+    ceoLine.innerHTML='种草通 CPA3 <strong style="color:var(--g)">¥'+(st.spend/st.a3).toFixed(2)+'</strong> | CPE: 星图<span id="t-cpe-star">—</span> 种草通¥'+(st.spend/st.eng).toFixed(2)+' 声量宝¥'+(sl.spend/sl.eng).toFixed(2);
+  }
+
+  // ── 品牌资产 CPA3 ──
+  setEl('k-ba-cpa3','¥'+(st.spend/st.a3).toFixed(2));
+  setEl('k-ba-a3cnt',fmt(st.a3));
+}
+
+// Helper: update KPI card value by label
+function updateCardKV(pageId,label,value,sub,instance){
+  instance=instance||0;
+  var page=document.getElementById(pageId);
+  if(!page)return;
+  var cards=page.querySelectorAll('.kc');
+  var found=0;
+  for(var i=0;i<cards.length;i++){
+    var lbl=cards[i].querySelector('.kl');
+    if(lbl && lbl.textContent.trim()===label){
+      if(found===instance){
+        cards[i].querySelector('.kv').textContent=value;
+        var kh=cards[i].querySelector('.kh');
+        if(kh && sub!==undefined) kh.textContent=sub;
+        return;
+      }
+      found++;
+    }
+  }
+}
+
+// Helper: update detail table row
+function updateDetailRow(pageId,label,value){
+  var page=document.getElementById(pageId);
+  if(!page)return;
+  var rows=page.querySelectorAll('table tr');
+  for(var i=0;i<rows.length;i++){
+    var td=rows[i].querySelector('td');
+    if(td && td.textContent.trim()===label){
+      var valTd=rows[i].querySelectorAll('td')[1];
+      if(valTd && value!==undefined) valTd.innerHTML='<b>'+value+'</b>';
+      return;
+    }
+  }
+}
+
 
 function renderCreatorTable(){
   var tb=document.getElementById('tbl-creator').querySelector('tbody');
@@ -636,12 +732,14 @@ function renderNonStarTable(){
 }
 function refreshCurrentPage(){
   renderCreatorTable();renderContentTable();renderNonStarTable();updateKPIs();
+  syncAllDisplayValues();
 }
 
 // ── INIT ──
 // Creator sub-tabs
 document.querySelectorAll('.nt-creator').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.nt-creator').forEach(function(x){x.classList.remove('active');x.style.background='';x.style.color=''});b.classList.add('active');b.style.background='var(--a)';b.style.color='#fff';document.querySelectorAll('.creator-sub').forEach(function(s){s.classList.remove('active')});document.getElementById('sub-'+b.dataset.sub).classList.add('active')})});
 renderCreatorTable();renderContentTable();renderNonStarTable();updateKPIs();
+  syncAllDisplayValues();
 </script>
 </body>
 </html>
